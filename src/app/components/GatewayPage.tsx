@@ -1,5 +1,5 @@
 import { ArrowRight, Brain, Cpu, BarChart2, GitBranch, Zap, Building2 } from 'lucide-react';
-import atlasLogo from '../../imports/Chalega.png';
+import atlasLogo from '../../assets/Chalega.png';
 import type { ReactNode } from 'react';
 
 interface GatewayCardProps {

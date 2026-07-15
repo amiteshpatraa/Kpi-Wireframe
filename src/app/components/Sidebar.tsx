@@ -1,6 +1,6 @@
 import { FileText, BarChart3, Shield, Package, Wrench, ChevronsLeft, ChevronsRight, LayoutDashboard, AlertTriangle, Boxes, Truck, GitBranch } from 'lucide-react';
 import { cn } from './ui/utils';
-import atlasLogo from '../../imports/image-1.png';
+import atlasLogo from '../../assets/image-1.png';
 
 export type PageId = 'overview' | 'summary' | 'production' | 'quality' | 'copq' | 'bpr' | 'otif' | 'inventory' | 'traceability' | 'maintenance';
 

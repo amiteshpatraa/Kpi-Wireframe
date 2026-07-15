@@ -7,8 +7,8 @@ import {
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, Cell, ReferenceLine, Tooltip } from 'recharts';
 import type { PageId } from './Sidebar';
 import { cn } from './ui/utils';
-import shopFloorBg from '../../imports/11.png';
-import lighthouseBg from '../../imports/21221.png';
+import shopFloorBg from '../../assets/11.png';
+import lighthouseBg from '../../assets/21221.png';
 import { useFilter } from '../contexts/FilterContext';
 
 // 7-month YTD historical datasets with high natural variance (Jan to Jul)

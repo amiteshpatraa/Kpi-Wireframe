@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, User, Home, Cpu, Layers, AlertTriangle, Boxes, Truck, GitBranch, FlaskConical } from 'lucide-react';
-import atlasLogo from '../../imports/image-1.png';
+import atlasLogo from '../../assets/image-1.png';
 import type { PageId } from './Sidebar';
 
 type NavTarget = PageId | 'executive';
