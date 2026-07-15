@@ -15,6 +15,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceArea,
   Legend,
   Cell,
   PieChart,
@@ -85,6 +86,11 @@ function getBprData(filters: FilterState) {
   return getDashboardData('BPR', filters.subPeriod || filters.trend, filters.product, filters.process);
 }
 
+function isMtdWtd(eff: FilterState) {
+  const p = (eff.subPeriod || eff.trend || '').toLowerCase();
+  return p === 'mtd' || p === 'mom' || p === 'wtd' || p === 'wow' || p === 'month' || p === 'week';
+}
+
 export function BprPage({ filters, onChange }: BprPageProps) {
   const [activePillar, setActivePillar] = useState<PillarId | null>(null);
   // Per-card local filter locks: [SUMMARY, VOLATILITY, ADHERENCE, PENETRATION]
@@ -131,6 +137,69 @@ export function BprPage({ filters, onChange }: BprPageProps) {
       q4Lock;
     return getBprData(cardLock ? cardLock.effectiveFilters : filters);
   }, [activePillar, q1Lock.effectiveFilters, q2Lock.effectiveFilters, q3Lock.effectiveFilters, q4Lock.effectiveFilters, filters]);
+
+  const q2PromisedActualData = useMemo(() => {
+    const basePromised: Record<string, number> = {
+      'Krupp Steel Forge': 6,
+      'Acme Castings': 8,
+      'SealTech Components': 5,
+    };
+    return q2Data.vendorDelayData.map((d: any) => {
+      const promised = basePromised[d.vendor] || 5;
+      const actual = +(promised + d.delayDays).toFixed(1);
+      return {
+        supplier: d.vendor,
+        promised,
+        actual,
+      };
+    });
+  }, [q2Data.vendorDelayData]);
+
+  const activePromisedActualData = useMemo(() => {
+    const basePromised: Record<string, number> = {
+      'Krupp Steel Forge': 6,
+      'Acme Castings': 8,
+      'SealTech Components': 5,
+    };
+    return activeData.vendorDelayData.map((d: any) => {
+      const promised = basePromised[d.vendor] || 5;
+      const actual = +(promised + d.delayDays).toFixed(1);
+      return {
+        supplier: d.vendor,
+        promised,
+        actual,
+      };
+    });
+  }, [activeData.vendorDelayData]);
+
+  const q3AdherenceDataWithVolume = useMemo(() => {
+    return q3Data.scheduleAdherenceData.map((d: any, i: number) => {
+      const baseOrders = 200 + (Math.sin(i) * 100) + (Math.cos(i * 2) * 50);
+      const ordersDispatched = Math.round(baseOrders);
+      return {
+        ...d,
+        ordersDispatched,
+      };
+    });
+  }, [q3Data.scheduleAdherenceData]);
+
+  const activeAdherenceDataWithVolume = useMemo(() => {
+    return activeData.scheduleAdherenceData.map((d: any, i: number) => {
+      const baseOrders = 200 + (Math.sin(i) * 100) + (Math.cos(i * 2) * 50);
+      const ordersDispatched = Math.round(baseOrders);
+      return {
+        ...d,
+        ordersDispatched,
+      };
+    });
+  }, [activeData.scheduleAdherenceData]);
+
+  const filteredReplenishmentLedger = useMemo(() => {
+    if (!selectedBufferZone) return activeData.replenishmentLedger;
+    return activeData.replenishmentLedger.filter(
+      (item: any) => item.zone === selectedBufferZone
+    );
+  }, [activeData.replenishmentLedger, selectedBufferZone]);
 
   const cardStyle = {
     background: T.cardBg,
@@ -414,37 +483,50 @@ export function BprPage({ filters, onChange }: BprPageProps) {
 
   const VolatilityWorkspace = () => {
     // Generate supplier ledger data mapped from delays
-    const supplierLedgerData = activeData.vendorDelayData.map((d, idx) => ({
+    const supplierLedgerData = activeData.vendorDelayData.map((d: any, idx: number) => ({
       vendor: d.vendor,
-      partId: ['PART-339', 'PART-111', 'PART-654', 'PART-882', 'PART-902', 'PART-102'][idx % 6],
+      partId: ['2002254-00-E06', '2002254-00-E08', '2002254-00-E10', '2002254-00-E12'][idx % 4],
       delayDays: d.delayDays,
-      station: idx % 2 === 0 ? 'LW1' : 'VMC1'
+      station: idx % 2 === 0 ? 'LW-1' : 'OP50-01'
     }));
 
     return (
       <div className="flex flex-col gap-6 w-full pb-8">
-        {/* Row 1: Vendor Delay Bar Chart */}
+        {/* Row 1: Replenishment Order Backlog Aging Chart */}
         <div style={{ ...cardStyle, padding: '24px' }} className="flex flex-col">
           <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '14px', marginBottom: '16px' }}>
             <h4 style={{ color: T.numColor, fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Vendor Lead-Time &amp; Delays
+              Replenishment Order Backlog Aging
             </h4>
             <p style={{ color: T.mutedColor, fontSize: '9px', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }} className="mt-0.5">
-              Average delay days ranked by supplier severity — {activeData.label}
+              Outstanding supplier purchase orders categorized by delay age — BPR Backlog
             </p>
           </div>
           <div className="h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activeData.vendorDelayData} layout="vertical" margin={{ top: 10, right: 15, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                <YAxis dataKey="vendor" type="category" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} width={120} axisLine={false} tickLine={false} />
+              <BarChart data={activeData.replenishmentBacklogData} margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="yellowBacklog" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#FFDA62" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#E5B210" stopOpacity={0.85} />
+                  </linearGradient>
+                  <linearGradient id="orangeBacklog" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#FFAE6E" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#D97706" stopOpacity={0.85} />
+                  </linearGradient>
+                  <linearGradient id="crimsonBacklog" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#EF4444" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#991B1B" stopOpacity={0.85} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                <XAxis dataKey="supplier" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 8, fill: '#64748B' }} ticks={[0, 10, 20, 30, 40]} domain={[0, 40]} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={T.tt} />
-                <Bar dataKey="delayDays" name="Avg Days Late" maxBarSize={12} radius={[0, 3, 3, 0]}>
-                  {activeData.vendorDelayData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
+                <Bar dataKey="minorDelay" name="0-3 Days Overdue" stackId="a" fill="url(#yellowBacklog)" maxBarSize={24} />
+                <Bar dataKey="moderateDelay" name="4-7 Days Overdue" stackId="a" fill="url(#orangeBacklog)" maxBarSize={24} />
+                <Bar dataKey="criticalDelay" name="8+ Days Overdue (Critical)" stackId="a" fill="url(#crimsonBacklog)" radius={[4, 4, 0, 0]} maxBarSize={24} />
+                <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -534,31 +616,35 @@ export function BprPage({ filters, onChange }: BprPageProps) {
           </div>
           <div className="h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={activeData.scheduleAdherenceData} margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
+              <ComposedChart data={activeAdherenceDataWithVolume} margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} domain={[50, 100]} />
+                <YAxis yAxisId="left" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} domain={[50, 100]} />
                 <Tooltip contentStyle={T.tt} />
+                <Bar yAxisId="left" dataKey="ordersDispatched" name="Total Orders Dispatched" fill="#4988C4" radius={[3, 3, 0, 0]} maxBarSize={30} />
                 <Line 
+                  yAxisId="right"
                   type="monotone" 
                   dataKey="supplier" 
                   name="Supplier Adherence"
-                  stroke="#3B82F6" 
+                  stroke="#8FDDDF" 
                   strokeWidth={2.5} 
-                  dot={{ r: 3.5, stroke: "#3B82F6", strokeWidth: 1, fill: "#FFFFFF" }} 
+                  dot={{ r: 3.5, stroke: "#8FDDDF", strokeWidth: 1, fill: "#FFFFFF" }} 
                   activeDot={{ r: 5 }} 
                 />
                 <Line 
+                  yAxisId="right"
                   type="monotone" 
                   dataKey="demand" 
                   name="Demand Adherence"
-                  stroke="#10B981" 
+                  stroke="#FFAE6E" 
                   strokeWidth={2.5} 
-                  dot={{ r: 3.5, stroke: "#10B981", strokeWidth: 1, fill: "#FFFFFF" }} 
+                  dot={{ r: 3.5, stroke: "#FFAE6E", strokeWidth: 1, fill: "#FFFFFF" }} 
                   activeDot={{ r: 5 }} 
                 />
                 <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
-              </LineChart>
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -609,64 +695,155 @@ export function BprPage({ filters, onChange }: BprPageProps) {
     );
   };
 
-  const PenetrationWorkspace = () => (
-    <div className="flex flex-col gap-6 w-full pb-8">
-      {/* Row 1: Buffer Penetration Zone Chart (4-Zone Step Area with netFlow line) */}
-      <div style={cardStyle} className="p-6 flex flex-col">
-        <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '14px', marginBottom: '16px' }}>
-          <h4 style={{ color: T.numColor, fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            Buffer Penetration Zone Chart
-          </h4>
-          <p style={{ color: T.mutedColor, fontSize: '9px', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }} className="mt-0.5">
-            Monthly 4-zone step area chart (DDMRP red, yellow, green, blue) with Net Flow Position superimposed
-          </p>
-        </div>
-        <div className="h-[280px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={activeData.bufferPenetrationStepData} margin={{ top: 15, right: 24, left: -20, bottom: 10 }}>
-              {renderGradientDefs()}
-              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 800 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={T.tt} />
-              <Area type="step" dataKey="overstock" fill="url(#blueGrad)" fillOpacity={0.2} stroke="#3B82F6" strokeWidth={0} />
-              <Area type="step" dataKey="safe" fill="url(#greenGrad)" fillOpacity={0.2} stroke="#10B981" strokeWidth={0} />
-              <Area type="step" dataKey="warning" fill="url(#amberGrad)" fillOpacity={0.4} stroke="#F59E0B" strokeWidth={0} />
-              <Area type="step" dataKey="critical" fill="url(#redGrad)" fillOpacity={0.5} stroke="#EF4444" strokeWidth={0} />
-              <Line type="monotone" dataKey="netFlow" stroke="#000000" strokeWidth={2.5} dot={{ r: 2 }} />
-              <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+  const PenetrationWorkspace = () => {
+    const isShort = isMtdWtd(q4Lock.effectiveFilters);
 
-      {/* Row 2: Cumulative Flow Diagram (CFD) */}
-      <div style={cardStyle} className="p-6 flex flex-col">
-        <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '14px', marginBottom: '16px' }}>
-          <h4 style={{ color: T.numColor, fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            Cumulative Flow Diagram (CFD)
-          </h4>
-          <p style={{ color: T.mutedColor, fontSize: '9px', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }} className="mt-0.5">
-            Station-by-station throughput over time tracking inventory flow and bottlenecks
-          </p>
+    return (
+      <div className="flex flex-col gap-6 w-full pb-8">
+        {/* Row 1: Dynamically Swapped Chart */}
+        <div style={{ ...cardStyle, padding: '24px' }} className="flex flex-col">
+          <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '14px', marginBottom: '16px' }}>
+            <h4 style={{ color: T.numColor, fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              {isShort ? "Buffer Penetration & Shortage Risk Donut" : "Buffer Penetration 100% Stacked Column Trend"}
+            </h4>
+            <p style={{ color: T.mutedColor, fontSize: '9px', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }} className="mt-0.5">
+              {isShort 
+                ? "Interactive segmented donut showing real-time buffer zone distribution — Click a slice to filter the ledger"
+                : `Monthly 100% Stacked Column Chart (RAG ZONES) — ${activeData.label}`}
+            </p>
+          </div>
+          
+          {isShort ? (
+            <div className="relative flex items-center justify-center" style={{ width: '100%', height: '260px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={activeData.donutData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={70}
+                    outerRadius={95}
+                    paddingAngle={3}
+                    dataKey="value"
+                    onClick={(data) => {
+                      if (data && data.payload) {
+                        setSelectedBufferZone((prev) => 
+                          prev === data.payload.zone ? null : data.payload.zone
+                        );
+                      }
+                    }}
+                  >
+                    {activeData.donutData.map((entry: any, index: number) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.color} 
+                        cursor="pointer" 
+                        stroke={selectedBufferZone === entry.zone ? '#0F172A' : 'none'}
+                        strokeWidth={selectedBufferZone === entry.zone ? 2 : 0}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={T.tt} formatter={(value) => [`${value}%`]} />
+                  <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: 'calc(50% - 24px)' }}>
+                <span className="text-xl font-black text-slate-800">{activeData.penetrationIndex.toFixed(1)}%</span>
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Compliant</span>
+              </div>
+            </div>
+          ) : (
+            <div className="h-[280px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={activeData.bufferPenetrationStackedData} margin={{ top: 15, right: 24, left: -20, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 800 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 8, fill: T.mutedColor }} tickFormatter={(v) => `${v}%`} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={T.tt} formatter={(value: number) => [`${value}%`]} />
+                  <Bar dataKey="critical" name="Critical Stockout" stackId="a" fill="#EF4444" />
+                  <Bar dataKey="warning" name="Warning/Reorder" stackId="a" fill="#F59E0B" />
+                  <Bar dataKey="optimal" name="Optimal/Safe" stackId="a" fill="#10B981" />
+                  <Bar dataKey="overstock" name="Overstock" stackId="a" fill="#3B82F6" radius={[3, 3, 0, 0]} />
+                  <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
-        <div className="h-[280px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={activeData.cfdData} margin={{ top: 15, right: 24, left: -20, bottom: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 800 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={T.tt} />
-              <Area type="monotone" dataKey="input" stackId="1" name="Input Queue" stroke="#4F46E5" fill="#4F46E5" fillOpacity={0.15} />
-              <Area type="monotone" dataKey="wip" stackId="2" name="Active WIP" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.2} />
-              <Area type="monotone" dataKey="output" stackId="3" name="Completed Output" stroke="#10B981" fill="#10B981" fillOpacity={0.15} />
-              <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+
+        {/* Row 2: Inventory & Replenishment Table (only visible for MTD/WTD views) */}
+        {isShort && (
+          <div style={cardStyle} className="p-6 flex flex-col gap-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <div>
+                <h4 style={{ color: T.numColor, fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  Active Inventory &amp; Replenishment Ledger
+                </h4>
+                <p style={{ color: T.mutedColor, fontSize: '8px', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }} className="mt-0.5">
+                  Current inventory levels, coverage status, and stock buffer zones
+                </p>
+              </div>
+              {selectedBufferZone && (
+                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider">
+                  <span>Filter: {selectedBufferZone}</span>
+                  <button 
+                    onClick={() => setSelectedBufferZone(null)}
+                    className="hover:text-amber-950 transition-colors font-extrabold focus:outline-none"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="overflow-hidden rounded-xl border border-slate-100">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-wider">
+                    <th className="p-3">Part ID</th>
+                    <th className="p-3">Description</th>
+                    <th className="p-3">Current Stock</th>
+                    <th className="p-3">Cover Days</th>
+                    <th className="p-3">Buffer Zone</th>
+                    <th className="p-3">Recommended Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredReplenishmentLedger.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-4 text-center text-slate-400 font-bold uppercase text-[10px]">
+                        No parts in this buffer zone
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredReplenishmentLedger.map((item: any, idx: number) => (
+                      <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
+                        <td className="p-3 text-slate-700 font-mono font-bold">{item.part}</td>
+                        <td className="p-3 text-slate-600 font-medium">{item.desc}</td>
+                        <td className="p-3 text-slate-800 font-black">{item.stock}</td>
+                        <td className="p-3 text-slate-600 font-medium">{item.cover}</td>
+                        <td className="p-3">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wide",
+                            item.zone === 'critical' && "bg-red-50 text-red-600 border border-red-100",
+                            item.zone === 'warning' && "bg-amber-50 text-amber-600 border border-amber-100",
+                            item.zone === 'optimal' && "bg-emerald-50 text-emerald-600 border border-emerald-100",
+                            item.zone === 'overstock' && "bg-blue-50 text-blue-600 border border-blue-100"
+                          )}>
+                            {item.zone}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-500 font-medium">{item.action}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   // ── RENDER BPR DASHBOARD LANDING PAGE (DEFAULT VIEW) ───────────────────────
   if (activePillar === null) {
@@ -809,16 +986,16 @@ export function BprPage({ filters, onChange }: BprPageProps) {
               </div>
             </div>
 
-            {/* Quadrant 2: SKU Lead-Time vs. Volatility Scatter */}
+            {/* Quadrant 2: SKU Lead-Time vs. Volatility Scatter or Grouped Columns */}
             <div
               onClick={() => { if (q2Lock.isLocked) onChange(q2Lock.effectiveFilters); setActivePillar('VOLATILITY'); }}
               className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg hover:border-amber-400 transition-all duration-300 cursor-pointer flex flex-col justify-between"
               style={{ ...cardStyle, ...lockedCardStyle(q2Lock.isLocked) }}
             >
               <CardLockHeader
-                title="Demand Volatility vs Lead-Time"
-                eyebrow="SKU Portfolio Scatter Matrix"
-                metric={<span className="text-xs font-black text-slate-700">18% Avg Cv</span>}
+                title={isMtdWtd(q2Lock.effectiveFilters) ? "Promised vs Actual Lead-Time" : "Demand Volatility vs Lead-Time"}
+                eyebrow={isMtdWtd(q2Lock.effectiveFilters) ? "Supplier Performance Matrix" : "SKU Portfolio Scatter Matrix"}
+                metric={<span className="text-xs font-black text-slate-700">{isMtdWtd(q2Lock.effectiveFilters) ? "Supplier Performance" : "18% Avg Cv"}</span>}
                 isLocked={q2Lock.isLocked}
                 effectiveFilters={q2Lock.effectiveFilters}
                 globalFilters={filters}
@@ -826,22 +1003,37 @@ export function BprPage({ filters, onChange }: BprPageProps) {
                 onSync={q2Lock.unlock}
               />
               <div className="h-[180px] w-full mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                    <XAxis dataKey="volatility" name="Volatility (Cv)" unit="%" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} type="number" axisLine={false} tickLine={false} />
-                    <YAxis dataKey="leadTime" name="Lead Time" unit="d" tick={{ fontSize: 8, fill: '#64748B' }} type="number" axisLine={false} tickLine={false} />
-                    <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={T.tt} />
-                    <ReferenceLine x={20} stroke="#94A3B8" strokeDasharray="3 3" />
-                    <ReferenceLine y={10} stroke="#94A3B8" strokeDasharray="3 3" />
-                    <Scatter name="SKUs" data={q2Data.partLevelVolatilityScatter}>
-                      {q2Data.partLevelVolatilityScatter.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.health === 'high' ? T.red : entry.health === 'med' ? T.amber : T.green} />
-                      ))}
-                    </Scatter>
-                    <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
-                  </ScatterChart>
-                </ResponsiveContainer>
+                {isMtdWtd(q2Lock.effectiveFilters) ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={q2PromisedActualData} margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                      <XAxis dataKey="supplier" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 8, fill: '#64748B' }} unit="d" axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={T.tt} />
+                      <Bar dataKey="promised" name="Promised LT" fill="#4988C4" radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="actual" name="Actual LT" fill="#FFAE6E" radius={[3, 3, 0, 0]} />
+                      <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                      <XAxis dataKey="volatility" name="Volatility (Cv)" unit="%" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} type="number" axisLine={false} tickLine={false} />
+                      <YAxis dataKey="leadTime" name="Lead Time" unit="d" tick={{ fontSize: 8, fill: '#64748B' }} type="number" axisLine={false} tickLine={false} />
+                      <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={T.tt} />
+                      <ReferenceArea x1={20} y1={10} fill="#F59E0B" fillOpacity={0.1} stroke="#F59E0B" strokeDasharray="3 3" />
+                      <ReferenceLine x={20} stroke="#94A3B8" strokeDasharray="3 3" />
+                      <ReferenceLine y={10} stroke="#94A3B8" strokeDasharray="3 3" />
+                      <Scatter name="SKUs" data={q2Data.partLevelVolatilityScatter}>
+                        {q2Data.partLevelVolatilityScatter.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.health === 'high' ? T.red : entry.health === 'med' ? T.amber : T.green} />
+                        ))}
+                      </Scatter>
+                      <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                )}
               </div>
               <div className="flex justify-between items-center text-[8px] font-black text-slate-400 uppercase mt-4 pt-2 border-t border-slate-100">
                 <span>RCA Diagnostics</span>
@@ -867,13 +1059,31 @@ export function BprPage({ filters, onChange }: BprPageProps) {
               />
               <div className="h-[180px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={q3Data.scheduleAdherenceData} margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
-                    {renderGradientDefs()}
+                  <ComposedChart data={q3AdherenceDataWithVolume} margin={{ top: 10, right: -5, left: -25, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} domain={[50, 100]} />
-                    <Area type="monotone" dataKey="supplier" name="Supplier Adherence" stroke="#3B82F6" strokeWidth={2} fill="url(#blueGrad)" fillOpacity={0.15} />
-                    <Area type="monotone" dataKey="demand"   name="Demand Adherence" stroke="#10B981" strokeWidth={2} fill="url(#greenGrad)" fillOpacity={0.15} />
+                    <YAxis yAxisId="left" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} domain={[50, 100]} />
+                    <Tooltip contentStyle={T.tt} />
+                    <Bar yAxisId="left" dataKey="ordersDispatched" name="Total Orders" fill="#4988C4" radius={[3, 3, 0, 0]} maxBarSize={20} />
+                    <Line 
+                      yAxisId="right"
+                      type="monotone" 
+                      dataKey="supplier" 
+                      name="Supplier Adherence"
+                      stroke="#8FDDDF" 
+                      strokeWidth={2} 
+                      dot={false}
+                    />
+                    <Line 
+                      yAxisId="right"
+                      type="monotone" 
+                      dataKey="demand"   
+                      name="Demand Adherence"
+                      stroke="#FFAE6E" 
+                      strokeWidth={2} 
+                      dot={false}
+                    />
                     <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
                   </ComposedChart>
                 </ResponsiveContainer>
@@ -884,51 +1094,71 @@ export function BprPage({ filters, onChange }: BprPageProps) {
               </div>
             </div>
 
-            {/* Quadrant 4: Penetration & Shortage Donut Risk */}
+            {/* Quadrant 4: Penetration & Shortage Donut Risk or Stacked Column Chart */}
             <div
               onClick={() => { if (q4Lock.isLocked) onChange(q4Lock.effectiveFilters); setActivePillar('PENETRATION'); }}
               className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg hover:border-amber-400 transition-all duration-300 cursor-pointer flex flex-col justify-between"
               style={{ ...cardStyle, ...lockedCardStyle(q4Lock.isLocked) }}
             >
               <CardLockHeader
-                title="Penetration &amp; Shortage Risk"
-                eyebrow="Interactive Segmented Donut"
-                metric={<span className="text-xs font-black text-slate-700">{q4Data.shortageDistribution.find(s => s.name.includes('Critical'))?.count || 0} Crit Parts</span>}
+                title={isMtdWtd(q4Lock.effectiveFilters) ? "Penetration & Shortage Risk" : "Buffer Penetration Health"}
+                eyebrow={isMtdWtd(q4Lock.effectiveFilters) ? "Interactive Segmented Donut" : "Monthly 100% Stacked Health"}
+                metric={<span className="text-xs font-black text-slate-700">{isMtdWtd(q4Lock.effectiveFilters) ? `${q4Data.shortageDistribution.find(s => s.name.includes('Critical'))?.count || 0} Crit Parts` : "YTD Trend"}</span>}
                 isLocked={q4Lock.isLocked}
                 effectiveFilters={q4Lock.effectiveFilters}
                 globalFilters={filters}
                 onToggleLock={q4Lock.toggle}
                 onSync={q4Lock.unlock}
               />
-              <div className="relative flex-grow flex items-center justify-center mt-4" style={{ minHeight: '180px' }}>
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie
-                      data={q4Data.donutData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={75}
-                      paddingAngle={3}
-                      dataKey="value"
-                      onClick={(data) => {
-                        if (data && data.payload) {
-                          setSelectedBufferZone(data.payload.zone);
-                          setActivePillar('PENETRATION');
-                        }
-                      }}
-                    >
-                      {q4Data.donutData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} cursor="pointer" />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={T.tt} formatter={(value) => [`${value}%`]} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-base font-black text-slate-800">{q4Data.penetrationIndex.toFixed(1)}%</span>
-                  <span className="text-[7.5px] text-slate-400 font-bold uppercase tracking-wider">Compliant</span>
-                </div>
+              <div className="mt-4 flex-grow flex flex-col justify-center">
+                {isMtdWtd(q4Lock.effectiveFilters) ? (
+                  <div className="relative flex-grow flex items-center justify-center" style={{ minHeight: '180px' }}>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <PieChart>
+                        <Pie
+                          data={q4Data.donutData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={55}
+                          outerRadius={75}
+                          paddingAngle={3}
+                          dataKey="value"
+                          onClick={(data) => {
+                            if (data && data.payload) {
+                              setSelectedBufferZone(data.payload.zone);
+                              setActivePillar('PENETRATION');
+                            }
+                          }}
+                        >
+                          {q4Data.donutData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} cursor="pointer" />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={T.tt} formatter={(value) => [`${value}%`]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-base font-black text-slate-800">{q4Data.penetrationIndex.toFixed(1)}%</span>
+                      <span className="text-[7.5px] text-slate-400 font-bold uppercase tracking-wider">Compliant</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-[180px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={q4Data.bufferPenetrationStackedData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 800 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 8, fill: T.mutedColor }} tickFormatter={(v) => `${v}%`} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={T.tt} formatter={(value: number) => [`${value}%`]} />
+                        <Bar dataKey="critical" name="Critical Stockout" stackId="a" fill="#EF4444" />
+                        <Bar dataKey="warning" name="Warning/Reorder" stackId="a" fill="#F59E0B" />
+                        <Bar dataKey="optimal" name="Optimal/Safe" stackId="a" fill="#10B981" />
+                        <Bar dataKey="overstock" name="Overstock" stackId="a" fill="#3B82F6" radius={[3, 3, 0, 0]} />
+                        <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
               <div className="flex justify-between items-center text-[8px] font-black text-slate-400 uppercase mt-4 pt-2 border-t border-slate-100">
                 <span>RCA Diagnostics</span>

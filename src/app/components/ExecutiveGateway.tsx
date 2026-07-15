@@ -4,7 +4,7 @@ import {
   FileText, Database, ShieldCheck, Calendar, ClipboardCheck, Cpu,
   Activity, Warehouse, TrendingDown, AlertOctagon, PackageCheck, GitCommit
 } from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, Cell, ReferenceLine } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, Cell, ReferenceLine, Tooltip } from 'recharts';
 import type { PageId } from './Sidebar';
 import { cn } from './ui/utils';
 import shopFloorBg from '../../imports/11.png';
@@ -96,27 +96,71 @@ const cardAnchors: Record<number, { left: number; top: number }> = {
 const cardCoords: Record<number, { top: number; left: number; width: number }> = {
   1: { top: 12, left: 22, width: 16.5 }, // OEE Card
   2: { top: 8, left: 45, width: 16.5 }, // Inventory Card
-  3: { top: 60, left: 2, width: 16.5 }, // COPQ Card
-  4: { top: 72, left: 39, width: 16.5 }, // BPR Card
+  3: { top: 55, left: 2, width: 16.5 }, // COPQ Card
+  4: { top: 65, left: 39, width: 16.5 }, // BPR Card
   5: { top: 12, left: 76, width: 16.5 }, // OTIF Card
-  6: { top: 74, left: 79, width: 16.5 }, // Traceability Card
+  6: { top: 67, left: 79, width: 16.5 }, // Traceability Card
 };
 
 interface ExecutiveGatewayProps {
   onEnterDashboard: (pageId: PageId) => void;
   onBack: () => void;
+  filters: any;
+  onChange: (filters: any) => void;
 }
 
+const MiniChartTooltip = ({ active, payload, label, unit }: any) => {
+  if (active && payload && payload.length) {
+    const fullMonthMap: Record<string, string> = {
+      'Jan': 'January', 'Feb': 'February', 'Mar': 'March', 'Apr': 'April',
+      'May': 'May', 'Jun': 'June', 'Jul': 'July', 'Aug': 'August',
+      'Sep': 'September', 'Oct': 'October', 'Nov': 'November', 'Dec': 'December'
+    };
+    const monthName = fullMonthMap[label] || label;
+    const value = payload[0].value;
+    const formattedVal = typeof value === 'number' ? value.toFixed(1) : value;
+
+    return (
+      <div
+        className="backdrop-blur-md shadow-lg animate-in fade-in zoom-in-95 duration-100"
+        style={{
+          background: 'rgba(15, 23, 42, 0.9)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '8px',
+          padding: '4px 8px',
+          pointerEvents: 'none',
+        }}
+      >
+        <p
+          style={{
+            fontSize: '8px',
+            color: '#E2E8F0',
+            fontWeight: 700,
+            margin: 0,
+            fontFamily: 'sans-serif',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {`${monthName} | ${formattedVal}${unit}`}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 // ── COMPACT KPI CARD COMPONENT FOR ISOMETRIC VIEW OVERLAYS ───────────────────
-function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing }: {
+function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing, onChartNodeClick }: {
   card: any;
   isHovered: boolean;
   onHover: (hovered: boolean) => void;
   onClick: () => void;
   liveData: any;
   isPulsing: boolean;
+  onChartNodeClick?: (month: string) => void;
 }) {
   const Icon = card.icon;
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const yTicks = card.id === 3
     ? [0, 1000000, 2000000, 3000000, 4000000, 5000000, 6000000]
@@ -141,11 +185,41 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
   };
   const areaTarget = getAreaTarget();
 
+  const hoverGlow = card.id === 1
+    ? 'rgba(93, 28, 106, 0.25)'
+    : card.id === 5
+      ? 'rgba(245, 120, 139, 0.25)'
+      : `rgba(${card.rgb}, 0.25)`;
+
+  const normalGlow = card.id === 1
+    ? 'rgba(93, 28, 106, 0.15)'
+    : card.id === 5
+      ? 'rgba(245, 120, 139, 0.15)'
+      : `rgba(${card.rgb}, 0.15)`;
+
+  const isWarningActive = (() => {
+    if (card.id === 1) return liveData.oee < 70;
+    if (card.id === 3) return liveData.copqLoss > 3500000;
+    if (card.id === 4) return liveData.daysOfSupply < 12.0;
+    if (card.id === 5) return liveData.otif < 94.2;
+    return false;
+  })();
+
+  const showWarningHighlight = isWarningActive && !isHovered;
+  const warningColor = card.id === 4 ? '#F97316' : '#EF4444';
+  const warningShadow = card.id === 4
+    ? '0 15px 35px -5px rgba(249, 115, 22, 0.2), 0 0 15px 2px rgba(249, 115, 22, 0.15)'
+    : '0 15px 35px -5px rgba(239, 68, 68, 0.2), 0 0 15px 2px rgba(239, 68, 68, 0.15)';
+
   const cardStyle: React.CSSProperties = {
-    boxShadow: isHovered
-      ? `0 12px 30px -10px rgba(15, 23, 42, 0.08), 0 0 20px 2px rgba(${card.rgb}, 0.25)`
-      : `0 12px 30px -10px rgba(15, 23, 42, 0.04), 0 0 15px 1px rgba(${card.rgb}, 0.15)`,
-    border: '1px solid rgba(226, 232, 240, 0.8)',
+    boxShadow: showWarningHighlight
+      ? warningShadow
+      : (isHovered
+        ? `0 12px 30px -10px rgba(15, 23, 42, 0.08), 0 0 20px 2px ${hoverGlow}`
+        : `0 12px 30px -10px rgba(15, 23, 42, 0.04), 0 0 15px 1px ${normalGlow}`),
+    border: showWarningHighlight
+      ? `2px solid ${warningColor}`
+      : '1px solid rgba(226, 232, 240, 0.8)',
     background: isHovered
       ? 'rgba(255, 255, 255, 0.88)'
       : 'rgba(255, 255, 255, 0.75)',
@@ -159,7 +233,7 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
     gap: isHovered ? '8px' : '10px',
     width: isHovered ? '320px' : '270px',
     height: isHovered ? '320px' : '110px',
-    padding: isHovered ? '12px 12px 20px 12px' : '12px',
+    padding: isHovered ? '12px 12px 20px 12px' : '10px',
   };
 
   return (
@@ -210,7 +284,7 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
       <div className="flex justify-between items-baseline shrink-0">
         <span
           style={{
-            color: '#1E293B',
+            color: showWarningHighlight ? warningColor : '#1E293B',
             fontSize: '1.25rem',
             fontWeight: 600,
             fontFamily: 'sans-serif',
@@ -230,7 +304,7 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
           opacity: !isHovered ? 1 : 0,
           transition: 'all 0.3s ease-in-out',
         }}
-        className="overflow-hidden border-t border-slate-100/70 pt-2 flex items-center justify-between mt-auto shrink-0 w-full"
+        className="overflow-hidden border-t border-slate-100/70 pt-0.5 flex items-center justify-between mt-auto shrink-0 w-full"
       >
         <div className="flex items-center gap-1 min-w-0 w-full">
           {/* Indicator Dot */}
@@ -295,7 +369,35 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
                 <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} dy={4} />
                 <YAxis tick={{ fontSize: 7, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} ticks={yTicks} domain={yDomain} tickFormatter={tickFormatter} width={25} />
                 <ReferenceLine y={areaTarget.y} stroke="#EF4444" strokeDasharray="3 3" label={{ value: areaTarget.label, fill: '#EF4444', fontSize: 7, fontWeight: 700 }} />
-                <Area type="monotone" dataKey="value" stroke={card.color} strokeWidth={1.5} fill={`url(#areaGradHover-${card.id})`} dot={{ r: 1.5, stroke: card.color, strokeWidth: 0.5, fill: '#ffffff' }} />
+                <Tooltip content={<MiniChartTooltip unit={card.id === 1 ? "% OEE" : "% OTIF"} />} cursor={false} />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke={card.color}
+                  strokeWidth={1.5}
+                  fill={`url(#areaGradHover-${card.id})`}
+                  dot={{ r: 1.5, stroke: card.color, strokeWidth: 0.5, fill: '#ffffff' }}
+                  activeDot={{
+                    r: 4,
+                    stroke: card.color,
+                    strokeWidth: 1.5,
+                    fill: '#ffffff',
+                    style: {
+                      transform: 'scale(1.3)',
+                      transformOrigin: 'center',
+                      filter: `drop-shadow(0 0 6px ${card.color})`,
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer'
+                    },
+                    onClick: (e: any, payload: any) => {
+                      if (e && e.stopPropagation) e.stopPropagation();
+                      const clickedMonth = payload?.payload?.name || payload?.name || e?.payload?.name || e?.name;
+                      if (clickedMonth && onChartNodeClick) {
+                        onChartNodeClick(clickedMonth);
+                      }
+                    }
+                  }}
+                />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -311,10 +413,46 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
                 <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} dy={4} />
                 <YAxis tick={{ fontSize: 7, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} ticks={yTicks} domain={yDomain} tickFormatter={tickFormatter} width={25} />
                 <ReferenceLine y={card.id === 5 ? 95 : 1500000} stroke="#EF4444" strokeDasharray="3 3" label={{ value: `Target ${card.id === 5 ? '95%' : '₹15L'}`, fill: '#EF4444', fontSize: 7, fontWeight: 700 }} />
-                <Bar dataKey="value" radius={[2, 2, 0, 0]} maxBarSize={8}>
-                  {card.chartData.map((entry: any, index: number) => (
-                    <Cell key={`cell-hover-${index}`} fill={`url(#barGradHover-${card.id})`} />
-                  ))}
+                <Tooltip content={<MiniChartTooltip unit={card.id === 5 ? "% OTIF" : " L"} />} cursor={false} />
+                <Bar
+                  dataKey="value"
+                  radius={[2, 2, 0, 0]}
+                  maxBarSize={8}
+                  onMouseEnter={(data: any, state: any) => {
+                    if (state && typeof state.activeIndex === 'number') {
+                      setActiveIndex(state.activeIndex);
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    setActiveIndex(null);
+                  }}
+                  onClick={(data: any, index: number, e: any) => {
+                    const eventObj = e || (index && typeof index === 'object' && index) || data;
+                    if (eventObj && eventObj.stopPropagation) {
+                      eventObj.stopPropagation();
+                    }
+                    const clickedMonth = data?.name || data?.payload?.name || data?.activeLabel;
+                    if (clickedMonth && onChartNodeClick) {
+                      onChartNodeClick(clickedMonth);
+                    }
+                  }}
+                >
+                  {card.chartData.map((entry: any, index: number) => {
+                    const isActive = activeIndex === index;
+                    return (
+                      <Cell
+                        key={`cell-hover-${index}`}
+                        fill={`url(#barGradHover-${card.id})`}
+                        style={{
+                          transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                          transformOrigin: 'bottom center',
+                          filter: isActive ? `drop-shadow(0 0 4px ${card.color})` : 'none',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    );
+                  })}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -335,8 +473,30 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
   );
 }
 
-export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayProps) {
+export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }: ExecutiveGatewayProps) {
   const { calibratedIsometricCoords } = useFilter();
+
+  const handleChartNodeClick = (monthName: string, redirectTarget: PageId) => {
+    const shortMonthMap: Record<string, number> = {
+      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11,
+      'January': 0, 'February': 1, 'March': 2, 'April': 3, 'June': 5,
+      'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+    };
+    const monthIdx = shortMonthMap[monthName] !== undefined ? shortMonthMap[monthName] : 2; // Default to Mar (2)
+    const currentYear = filters?.selectedDate ? filters.selectedDate.getFullYear() : 2026;
+    const newDate = new Date(currentYear, monthIdx, 12);
+
+    onChange({
+      ...filters,
+      trend: 'month',
+      subPeriod: 'mtd',
+      selectedDate: newDate,
+      sidebarPeriodSelected: true
+    });
+
+    onEnterDashboard(redirectTarget);
+  };
 
   const getPointsCentroid = (points: { x: number; y: number }[], fallback: { top: number; left: number }) => {
     if (!points || points.length === 0) return fallback;
@@ -409,6 +569,8 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
 
   const [pulseStates, setPulseStates] = useState<Record<string, boolean>>({});
   const [hoveredCardId, setHoveredCardId] = useState<number | null>(null);
+  const [gridHoveredBarIndex, setGridHoveredBarIndex] = useState<number | null>(null);
+  const [gridHoveredCardId, setGridHoveredCardId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'ISOMETRIC' | 'GRID' | 'RADAR'>('GRID');
   const [isMobile, setIsMobile] = useState(false);
 
@@ -784,7 +946,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                 ? 'Operational Control Tower Map'
                 : activeViewMode === 'RADAR'
                   ? 'Lighthouse operational radar'
-                  : 'Enterprise Dashboard Grid'}
+                  : 'Shopfloor KPI Summary'}
             </h2>
             <p className="text-xs text-slate-500 mt-1 max-w-lg mx-auto">
               {activeViewMode === 'ISOMETRIC'
@@ -1236,6 +1398,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                       onClick={() => onEnterDashboard(c.redirectTarget)}
                       liveData={liveData}
                       isPulsing={isPulsing}
+                      onChartNodeClick={(monthName) => handleChartNodeClick(monthName, c.redirectTarget)}
                     />
                   </div>
                 );
@@ -1272,10 +1435,10 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                   const radarCoords: Record<number, { x2: number, y2: number, points: string, isCritical: boolean }> = {
                     1: { x2: 16, y2: 15, points: "50,43.5 8,19 22,8", isCritical: isOeeCritical }, // OEE
                     3: { x2: 84, y2: 15, points: "50,43.5 78,8 92,19", isCritical: isCopqCritical }, // COPQ
-                    4: { x2: 14, y2: 50, points: "50,38.5 14,40 14,60", isCritical: isBprCritical }, // BPR
-                    5: { x2: 75, y2: 50, points: "50,43.5 86,40 86,60", isCritical: isOtifCritical }, // OTIF
-                    2: { x2: 16, y2: 85, points: "50,43.5 8,81 22,92", isCritical: isInventoryCritical }, // Inventory
-                    6: { x2: 84, y2: 85, points: "50,43.5 78,92 92,81", isCritical: isTraceabilityCritical }, // Traceability
+                    4: { x2: 15, y2: 50, points: "50,43.5 15,47 15,53", isCritical: isBprCritical }, // BPR
+                    5: { x2: 85, y2: 50, points: "50,43.5 85,47 85,53", isCritical: isOtifCritical }, // OTIF
+                    2: { x2: 16, y2: 78, points: "50,43.5 8,74 22,84", isCritical: isInventoryCritical }, // Inventory
+                    6: { x2: 84, y2: 78, points: "50,43.5 78,84 92,74", isCritical: isTraceabilityCritical }, // Traceability
                   };
 
                   return Object.entries(radarCoords).map(([cardIdStr, coord]) => {
@@ -1339,10 +1502,10 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                 const radarCardCoords: Record<number, { top: string, left: string }> = {
                   1: { top: '15%', left: '16%' },
                   3: { top: '15%', left: '84%' },
-                  4: { top: '50%', left: '14%' },
-                  5: { top: '50%', left: '86%' },
-                  2: { top: '85%', left: '16%' },
-                  6: { top: '85%', left: '84%' },
+                  4: { top: '50%', left: '15%' },
+                  5: { top: '50%', left: '85%' },
+                  2: { top: '78%', left: '16%' },
+                  6: { top: '78%', left: '84%' },
                 };
 
                 return cards.map((c) => {
@@ -1352,10 +1515,26 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                   const isHovered = hoveredCardId === c.id;
                   const isSpotlightActive = c.id === activeSpotlightCardId;
                   const isPulsing = pulseStates[c.pulseKey];
+                  const isWarningActive = (() => {
+                    if (c.id === 1) return liveData.oee < 70;
+                    if (c.id === 3) return liveData.copqLoss > 3500000;
+                    if (c.id === 4) return liveData.daysOfSupply < 12.0;
+                    if (c.id === 5) return liveData.otif < 94.2;
+                    return false;
+                  })();
+                  const isWarning = isWarningActive && !isHovered;
+                  const warningColor = c.id === 4 ? '#F97316' : '#EF4444';
+                  const warningShadow = c.id === 4
+                    ? '0 15px 35px -5px rgba(249, 115, 22, 0.2), 0 0 15px 2px rgba(249, 115, 22, 0.15)'
+                    : '0 15px 35px -5px rgba(239, 68, 68, 0.2), 0 0 15px 2px rgba(239, 68, 68, 0.15)';
 
                   // Float style with shadow matching the light-themed backdrop
                   const cardShadow = isHovered
-                    ? `0 20px 25px -5px rgba(${c.rgb}, 0.15), 0 10px 10px -5px rgba(${c.rgb}, 0.05)`
+                    ? (c.id === 1
+                      ? '0 20px 25px -5px rgba(93, 28, 106, 0.25), 0 10px 10px -5px rgba(93, 28, 106, 0.15)'
+                      : (c.id === 5
+                        ? '0 20px 25px -5px rgba(245, 120, 139, 0.25), 0 10px 10px -5px rgba(245, 120, 139, 0.15)'
+                        : `0 20px 25px -5px rgba(${c.rgb}, 0.15), 0 10px 10px -5px rgba(${c.rgb}, 0.05)`))
                     : '0 8px 16px -6px rgba(15,23,42,0.08), 0 4px 8px -4px rgba(15,23,42,0.04)';
 
                   return (
@@ -1374,9 +1553,11 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                       <div
                         style={{
                           borderRadius: '16px',
-                          boxShadow: cardShadow,
-                          border: isSpotlightActive ? `2px solid ${c.color}` : '1px solid rgba(226, 232, 240, 0.8)',
-                          transition: 'border-color 0.4s ease'
+                          boxShadow: isWarning ? warningShadow : cardShadow,
+                          border: isWarning
+                            ? `2px solid ${warningColor}`
+                            : (isSpotlightActive ? `2px solid ${c.color}` : '1px solid rgba(226, 232, 240, 0.8)'),
+                          transition: 'all 0.4s ease'
                         }}
                       >
                         <CompactKPICard
@@ -1386,6 +1567,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                           onClick={() => onEnterDashboard(c.redirectTarget)}
                           liveData={liveData}
                           isPulsing={isPulsing}
+                          onChartNodeClick={(monthName) => handleChartNodeClick(monthName, c.redirectTarget)}
                         />
                       </div>
                     </div>
@@ -1412,6 +1594,19 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
 
                 const isHovered = hoveredCardId === card.id;
 
+                const isWarningActive = (() => {
+                  if (card.id === 1) return liveData.oee < 70;
+                  if (card.id === 3) return liveData.copqLoss > 3500000;
+                  if (card.id === 4) return liveData.daysOfSupply < 12.0;
+                  if (card.id === 5) return liveData.otif < 94.2;
+                  return false;
+                })();
+                const showWarningHighlight = isWarningActive && !isHovered;
+                const warningColor = card.id === 4 ? '#F97316' : '#EF4444';
+                const warningShadow = card.id === 4
+                  ? '0 15px 35px -5px rgba(249, 115, 22, 0.2), 0 0 15px 2px rgba(249, 115, 22, 0.15)'
+                  : '0 15px 35px -5px rgba(239, 68, 68, 0.2), 0 0 15px 2px rgba(239, 68, 68, 0.15)';
+
                 return (
                   <div
                     key={card.id}
@@ -1420,10 +1615,30 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                     onMouseLeave={() => setHoveredCardId(null)}
                     className="group relative overflow-hidden rounded-2xl bg-white/95 p-4 cursor-pointer shadow-md"
                     style={{
-                      boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 4px 6px -4px rgba(15, 23, 42, 0.05)',
-                      border: '1px solid rgba(226, 232, 240, 0.9)',
+                      boxShadow: showWarningHighlight
+                        ? warningShadow
+                        : (isHovered
+                          ? (card.id === 1
+                            ? '0 20px 25px -5px rgba(93, 28, 106, 0.25), 0 10px 10px -5px rgba(93, 28, 106, 0.15)'
+                            : (card.id === 5
+                              ? '0 20px 25px -5px rgba(245, 120, 139, 0.25), 0 10px 10px -5px rgba(245, 120, 139, 0.15)'
+                              : `0 20px 25px -5px rgba(${card.rgb}, 0.15), 0 10px 10px -5px rgba(${card.rgb}, 0.05)`))
+                          : '0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 4px 6px -4px rgba(15, 23, 42, 0.05)'),
+                      border: showWarningHighlight
+                        ? `2px solid ${warningColor}`
+                        : (isHovered
+                          ? (card.id === 1
+                            ? '1px solid rgba(93, 28, 106, 0.4)'
+                            : (card.id === 5
+                              ? '1px solid rgba(245, 120, 139, 0.4)'
+                              : `1px solid rgba(${card.rgb}, 0.4)`))
+                          : '1px solid rgba(226, 232, 240, 0.9)'),
                       background: isHovered
-                        ? `radial-gradient(circle at center, rgba(${card.rgb}, 0.08) 0%, #FFFFFF 85%)`
+                        ? (card.id === 1
+                          ? 'radial-gradient(circle at center, rgba(93, 28, 106, 0.08) 0%, #FFFFFF 85%)'
+                          : (card.id === 5
+                            ? 'radial-gradient(circle at center, rgba(245, 120, 139, 0.08) 0%, #FFFFFF 85%)'
+                            : `radial-gradient(circle at center, rgba(${card.rgb}, 0.08) 0%, #FFFFFF 85%)`))
                         : '#FFFFFF',
                       transform: isHovered ? 'translateY(-4px)' : 'none',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1449,13 +1664,23 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                             {card.title}
                           </h3>
                           <div className="flex items-baseline gap-1 mt-0.5">
-                            <span className={cn(
-                              "text-base font-black tracking-tight transition-all duration-300",
-                              isPulsing ? "scale-105 text-blue-600 animate-pulse" : "text-slate-900"
-                            )}>
+                            <span
+                              style={{
+                                color: showWarningHighlight ? warningColor : undefined
+                              }}
+                              className={cn(
+                                "text-base font-black tracking-tight transition-all duration-300",
+                                isPulsing ? "scale-105 text-blue-600 animate-pulse" : (showWarningHighlight ? "" : "text-slate-900")
+                              )}
+                            >
                               {card.retroValue.split(' ')[0]}
                             </span>
-                            <span className="text-[9px] font-bold text-slate-500">
+                            <span
+                              style={{
+                                color: showWarningHighlight ? warningColor : undefined
+                              }}
+                              className="text-[9px] font-bold text-slate-500"
+                            >
                               {card.retroValue.split(' ').slice(1).join(' ')}
                             </span>
                           </div>
@@ -1530,7 +1755,9 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                             {card.id === 1 && (
                               <ReferenceLine y={80} stroke="#EF4444" strokeDasharray="3 3" />
                             )}
-
+                            {(card.id === 1 || card.id === 5) && (
+                              <Tooltip content={<MiniChartTooltip unit={card.id === 1 ? "% OEE" : "% OTIF"} />} cursor={false} />
+                            )}
                             {card.id === 4 ? (
                               <>
                                 <Area type="step" dataKey="overstock" fill="url(#blueGradGrid)" fillOpacity={0.2} stroke="#3B82F6" strokeWidth={0} />
@@ -1547,7 +1774,26 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                                 strokeWidth={1.75}
                                 fill={`url(#areaGrad-${card.id})`}
                                 dot={{ r: 1.5, stroke: card.color, strokeWidth: 0.75, fill: '#ffffff' }}
-                                activeDot={{ r: 3, stroke: card.color, strokeWidth: 0.75, fill: card.color }}
+                                activeDot={{
+                                  r: 3,
+                                  stroke: card.color,
+                                  strokeWidth: 1.5,
+                                  fill: card.color,
+                                  style: {
+                                    transform: 'scale(1.3)',
+                                    transformOrigin: 'center',
+                                    filter: `drop-shadow(0 0 6px ${card.color})`,
+                                    transition: 'all 0.2s ease',
+                                    cursor: 'pointer'
+                                  },
+                                  onClick: (e: any, payload: any) => {
+                                    if (e && e.stopPropagation) e.stopPropagation();
+                                    const clickedMonth = payload?.payload?.name || payload?.name || e?.payload?.name || e?.name;
+                                    if (clickedMonth && (card.id === 1 || card.id === 5)) {
+                                      handleChartNodeClick(clickedMonth, card.redirectTarget);
+                                    }
+                                  }
+                                }}
                               />
                             )}
                           </AreaChart>
@@ -1585,14 +1831,50 @@ export function ExecutiveGateway({ onEnterDashboard, onBack }: ExecutiveGatewayP
                             {card.id === 5 && (
                               <ReferenceLine y={95} stroke="#F59E0B" strokeDasharray="3 3" />
                             )}
+                            {(card.id === 1 || card.id === 5) && (
+                              <Tooltip content={<MiniChartTooltip unit={card.id === 5 ? "% OTIF" : " L"} />} cursor={false} />
+                            )}
                             <Bar
                               dataKey="value"
                               radius={[2, 2, 0, 0]}
                               maxBarSize={10}
+                              onMouseEnter={(data: any, state: any) => {
+                                setGridHoveredCardId(card.id);
+                                if (state && typeof state.activeIndex === 'number') {
+                                  setGridHoveredBarIndex(state.activeIndex);
+                                }
+                              }}
+                              onMouseLeave={() => {
+                                setGridHoveredCardId(null);
+                                setGridHoveredBarIndex(null);
+                              }}
+                              onClick={(data: any, index: number, e: any) => {
+                                const eventObj = e || (index && typeof index === 'object' && index) || data;
+                                if (eventObj && eventObj.stopPropagation) {
+                                  eventObj.stopPropagation();
+                                }
+                                const clickedMonth = data?.name || data?.payload?.name || data?.activeLabel;
+                                if (clickedMonth && (card.id === 1 || card.id === 5)) {
+                                  handleChartNodeClick(clickedMonth, card.redirectTarget);
+                                }
+                              }}
                             >
-                              {card.chartData.map((entry: any, index: number) => (
-                                <Cell key={`cell-${index}`} fill={`url(#barGrad-${card.id})`} />
-                              ))}
+                              {card.chartData.map((entry: any, index: number) => {
+                                const isActive = gridHoveredCardId === card.id && gridHoveredBarIndex === index;
+                                return (
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={`url(#barGrad-${card.id})`}
+                                    style={{
+                                      transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                                      transformOrigin: 'bottom center',
+                                      filter: isActive ? `drop-shadow(0 0 4px ${card.color})` : 'none',
+                                      transition: 'all 0.2s ease',
+                                      cursor: 'pointer'
+                                    }}
+                                  />
+                                );
+                              })}
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>

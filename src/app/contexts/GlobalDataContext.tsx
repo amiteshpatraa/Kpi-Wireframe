@@ -102,7 +102,13 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     console.time('[DataLoad] Fetch + expand');
     fetch('/data.json')
-      .then(res => res.json())
+      .then(res => {
+        const contentType = res.headers.get('content-type');
+        if (res.ok && contentType && contentType.includes('application/json')) {
+          return res.json();
+        }
+        throw new Error('Local database file not present or not valid JSON.');
+      })
       .then((jsonData: any[]) => {
         console.timeLog('[DataLoad] Fetch + expand', `Fetched ${jsonData.length} rows, expanding keys...`);
         const expanded = jsonData.map(expandRow);
@@ -111,7 +117,7 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
       })
       .catch(err => {
-        console.error("Error fetching master database, falling back to local generated database:", err);
+        console.info("Using local generated database fallback:", err.message);
         const mappedFallback = masterDb.map(mapMasterDbRow);
         setData(mappedFallback);
         setIsLoading(false);

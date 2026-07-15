@@ -57,22 +57,27 @@ type TraceabilityView = 'SUMMARY_CARD' | 'SPLIT_SCREEN';
 type PillarId = 'COMPLIANCE' | 'ACQUISITION' | 'THREAD';
 
 // ─── palette constants ───────────────────────────────────────────────────────
-const CYAN    = '#06B6D4';
-const COBALT  = '#3B82F6';
-const EMERALD = '#10B981';
-const MINT    = '#34D399';
-const VIOLET  = '#8B5CF6';
-const MAGENTA = '#EC4899';
-const RED     = '#EF4444';
-const CORAL   = '#F87171';
-const AMBER   = '#F59E0B';
+const BEIGE   = '#F5F5DC';
+const AMBER   = '#FBC02D';
+const ORANGE  = '#FF8F00';
+const CRIMSON = '#C62828';
 const SLATE   = '#64748B';
+
+// Re-map semantic colors to match the user's warm corporate palette
+const CYAN    = '#FBC02D';  // Amber
+const COBALT  = '#FF8F00';  // Orange
+const EMERALD = '#FF8F00';  // Orange
+const MINT    = '#F5F5DC';  // Beige
+const VIOLET  = '#FF8F00';  // Orange
+const MAGENTA = '#C62828';  // Crimson
+const RED     = '#C62828';  // Crimson
+const CORAL   = '#C62828';  // Crimson
 
 const lines  = ['Line 1','Line 2','Line 3'];
 const shifts = ['Shift A','Shift B','Shift C'];
 
 const riskColor = (v: number) =>
-  v >= 2.0 ? '#EF4444' : v >= 1.2 ? '#F59E0B' : '#10B981';
+  v >= 2.0 ? '#C62828' : v >= 1.2 ? '#FF8F00' : '#FBC02D';
 
 // ─── Digital Thread Node component ──────────────────────────────────────────
 interface ThreadNode {
@@ -182,28 +187,40 @@ export function TraceabilityPage({ filters, onChange }: TraceabilityPageProps) {
   const GradDefs = () => (
     <defs>
       <linearGradient id="cyanGrad"    x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stopColor={CYAN}    stopOpacity={.9} />
-        <stop offset="100%" stopColor={COBALT}  stopOpacity={.3} />
+        <stop offset="0%"   stopColor={AMBER}    stopOpacity={.9} />
+        <stop offset="100%" stopColor={BEIGE}  stopOpacity={.3} />
       </linearGradient>
       <linearGradient id="emeraldGrad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stopColor={EMERALD} stopOpacity={.9} />
-        <stop offset="100%" stopColor={MINT}    stopOpacity={.2} />
+        <stop offset="0%"   stopColor={ORANGE} stopOpacity={.9} />
+        <stop offset="100%" stopColor={AMBER}    stopOpacity={.2} />
       </linearGradient>
       <linearGradient id="violetGrad"  x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stopColor={VIOLET}  stopOpacity={.85}/>
-        <stop offset="100%" stopColor={MAGENTA} stopOpacity={.2} />
+        <stop offset="0%"   stopColor={CRIMSON}  stopOpacity={.85}/>
+        <stop offset="100%" stopColor={ORANGE} stopOpacity={.2} />
       </linearGradient>
       <linearGradient id="redGrad"     x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stopColor={RED}     stopOpacity={1}  />
-        <stop offset="100%" stopColor={CORAL}   stopOpacity={.7} />
+        <stop offset="0%"   stopColor={CRIMSON}     stopOpacity={1}  />
+        <stop offset="100%" stopColor={ORANGE}   stopOpacity={.7} />
       </linearGradient>
       <linearGradient id="amberGrad"   x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%"   stopColor={AMBER}   stopOpacity={1}  />
-        <stop offset="100%" stopColor="#B45309" stopOpacity={.7} />
+        <stop offset="100%" stopColor={BEIGE} stopOpacity={.7} />
       </linearGradient>
       <linearGradient id="gNeonCyanCobalt" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%"   stopColor="#06B6D4" />
-        <stop offset="100%" stopColor="#3B82F6" />
+        <stop offset="0%"   stopColor={AMBER} />
+        <stop offset="100%" stopColor={ORANGE} />
+      </linearGradient>
+      <linearGradient id="amberGoldGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stopColor="#FBC02D" />
+        <stop offset="100%" stopColor="#FF8F00" />
+      </linearGradient>
+      <linearGradient id="orangeCrimsonGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stopColor="#FF8F00" />
+        <stop offset="100%" stopColor="#C62828" />
+      </linearGradient>
+      <linearGradient id="creamAmberGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stopColor="#F5F5DC" />
+        <stop offset="100%" stopColor="#FBC02D" />
       </linearGradient>
     </defs>
   );
@@ -462,8 +479,8 @@ export function TraceabilityPage({ filters, onChange }: TraceabilityPageProps) {
     { q: 'Q4', line1: 4200,  line2: 22100, line3: 9800  },
   ];
 
-  const R_avail = 28;
-  const R_perf = 18;
+  const R_avail = 38;
+  const R_perf = 28;
   const C_avail = 2 * Math.PI * R_avail;
   const C_perf = 2 * Math.PI * R_perf;
 
@@ -518,7 +535,53 @@ export function TraceabilityPage({ filters, onChange }: TraceabilityPageProps) {
           LEVEL 0 — SUMMARY BALANCED GRID
       ══════════════════════════════════════════════════════════════════════ */}
       {currentView === 'SUMMARY_CARD' && (
-        <div className="flex-grow grid grid-cols-2 gap-6 w-full max-w-7xl mx-auto py-1">
+        <div className="flex-grow flex flex-col gap-6 w-full max-w-7xl mx-auto py-1">
+          {/* Synthetic KPI Summary Row */}
+          <div className="grid grid-cols-4 gap-6 w-full shrink-0">
+            <div style={card} className="p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex flex-col">
+                <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-wider">Total Traced Lots</span>
+                <span className="text-base font-black mt-1" style={{ color: '#C62828' }}>124,805</span>
+                <span className="text-[7px] font-semibold text-emerald-600 mt-0.5">+12.4% vs last Q</span>
+              </div>
+              <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-100 shrink-0">
+                <Database className="w-4 h-4" style={{ color: '#FF8F00' }} />
+              </div>
+            </div>
+            <div style={card} className="p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex flex-col">
+                <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-wider">Genealogy matching rate</span>
+                <span className="text-base font-black mt-1" style={{ color: '#FF8F00' }}>99.2%</span>
+                <span className="text-[7px] font-semibold text-emerald-600 mt-0.5">Target: 98.0%</span>
+              </div>
+              <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-100 shrink-0">
+                <ScanLine className="w-4 h-4" style={{ color: '#FF8F00' }} />
+              </div>
+            </div>
+            <div style={card} className="p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex flex-col">
+                <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-wider">Quarantined Lots</span>
+                <span className="text-base font-black mt-1" style={{ color: '#C62828' }}>2</span>
+                <span className="text-[7px] font-semibold text-rose-600 mt-0.5">Line 3 containment</span>
+              </div>
+              <div className="p-2.5 bg-rose-50 rounded-lg border border-rose-100 shrink-0">
+                <ShieldAlert className="w-4 h-4" style={{ color: '#C62828' }} />
+              </div>
+            </div>
+            <div style={card} className="p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex flex-col">
+                <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-wider">Gateways online</span>
+                <span className="text-base font-black mt-1" style={{ color: '#FBC02D' }}>14 / 14</span>
+                <span className="text-[7px] font-semibold text-emerald-600 mt-0.5">100% terminals up</span>
+              </div>
+              <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-100 shrink-0">
+                <Cpu className="w-4 h-4" style={{ color: '#FBC02D' }} />
+              </div>
+            </div>
+          </div>
+
+          {/* 2x2 Balanced Cards Grid */}
+          <div className="flex-grow grid grid-cols-2 gap-6 w-full">
 
           {/* Quadrant 1 (Top-Left): Traceability Summary Index Card */}
           <div
@@ -532,11 +595,11 @@ export function TraceabilityPage({ filters, onChange }: TraceabilityPageProps) {
               ...card,
               padding: '24px',
               boxShadow: traceProfile.isWarning
-                ? '0 12px 40px -10px rgba(239, 68, 68, 0.22), 0 1px 15px rgba(239, 68, 68, 0.12)'
-                : '0 12px 40px -10px rgba(99, 102, 241, 0.22), 0 1px 15px rgba(99, 102, 241, 0.12)',
+                ? '0 12px 40px -10px rgba(198, 40, 40, 0.22), 0 1px 15px rgba(198, 40, 40, 0.12)'
+                : '0 12px 40px -10px rgba(251, 192, 45, 0.22), 0 1px 15px rgba(251, 192, 45, 0.12)',
               border: traceProfile.isWarning
-                ? '1px solid rgba(239, 68, 68, 0.45)'
-                : '1px solid rgba(99, 102, 241, 0.45)',
+                ? '1px solid rgba(198, 40, 40, 0.45)'
+                : '1px solid rgba(251, 192, 45, 0.45)',
               cursor: 'pointer',
               ...lockedCardStyle(q1Lock.isLocked),
             }}
@@ -551,18 +614,32 @@ export function TraceabilityPage({ filters, onChange }: TraceabilityPageProps) {
               onSync={q1Lock.unlock}
             />
 
-            <div className="flex items-center gap-6 my-auto">
+            <div className="flex items-center gap-8 my-auto">
               {/* Radial rings */}
-              <div className="relative flex items-center justify-center w-[130px] h-[130px] shrink-0 select-none">
+              <div className="relative flex items-center justify-center w-[180px] h-[180px] shrink-0 select-none">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r={R_avail} fill="transparent" stroke="#F1F5F9" strokeWidth="6" />
-                  <circle cx="50" cy="50" r={R_perf} fill="transparent" stroke="#F1F5F9" strokeWidth="6" />
-                  <circle cx="50" cy="50" r={R_avail} fill="transparent" stroke={traceProfile.isWarning ? RED : VIOLET} strokeWidth="6" strokeDasharray={C_avail} strokeDashoffset={dashoffsetAvail} strokeLinecap="round" />
-                  <circle cx="50" cy="50" r={R_perf} fill="transparent" stroke={EMERALD} strokeWidth="6" strokeDasharray={C_perf} strokeDashoffset={dashoffsetPerf} strokeLinecap="round" />
+                  <defs>
+                    <linearGradient id="amberGoldGradGauge" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#FBC02D" />
+                      <stop offset="100%" stopColor="#FF8F00" />
+                    </linearGradient>
+                    <linearGradient id="orangeCrimsonGradGauge" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#FF8F00" />
+                      <stop offset="100%" stopColor="#C62828" />
+                    </linearGradient>
+                    <linearGradient id="creamAmberGradGauge" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#F5F5DC" stopOpacity={0.6} />
+                      <stop offset="100%" stopColor="#FBC02D" stopOpacity={0.25} />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="50" cy="50" r={R_avail} fill="transparent" stroke="url(#creamAmberGradGauge)" strokeWidth="8" />
+                  <circle cx="50" cy="50" r={R_perf} fill="transparent" stroke="url(#creamAmberGradGauge)" strokeWidth="8" />
+                  <circle cx="50" cy="50" r={R_avail} fill="transparent" stroke="url(#orangeCrimsonGradGauge)" strokeWidth="8" strokeDasharray={C_avail} strokeDashoffset={dashoffsetAvail} strokeLinecap="round" />
+                  <circle cx="50" cy="50" r={R_perf} fill="transparent" stroke="url(#amberGoldGradGauge)" strokeWidth="8" strokeDasharray={C_perf} strokeDashoffset={dashoffsetPerf} strokeLinecap="round" />
                 </svg>
                 <div className="absolute flex flex-col items-center justify-center">
-                  <span className="text-base font-black text-slate-800" style={{ color: traceProfile.isWarning ? RED : '#0F172A' }}>{traceProfile.complianceIndex}%</span>
-                  <span className="text-[7.5px] text-slate-400 font-bold uppercase tracking-wider leading-none mt-0.5">COMPLIANCE</span>
+                  <span className="text-[26px] font-black text-slate-800" style={{ color: '#C62828' }}>{traceProfile.complianceIndex}%</span>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mt-1">COMPLIANCE</span>
                 </div>
               </div>
 
@@ -720,6 +797,7 @@ export function TraceabilityPage({ filters, onChange }: TraceabilityPageProps) {
             </div>
           </div>
 
+          </div>
         </div>
       )}
 
