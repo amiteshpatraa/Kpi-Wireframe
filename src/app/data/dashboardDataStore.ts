@@ -653,20 +653,6 @@ function resolveDashboardData(page: PageId, period: PeriodId, product: ProductId
       };
     });
 
-    const cfdData = tLabels.map((name, i) => {
-      let stock = 120;
-      if (period === 'MTD' && i + 1 === 12) {
-        stock = 8;
-      } else {
-        stock = 80 + Math.sin(i) * 20;
-      }
-      return {
-        name,
-        stock: Math.round(stock * scale),
-        safe: 70,
-        limit: 15
-      };
-    });
 
     const shortageDistribution = isLW1 
       ? [
@@ -705,29 +691,30 @@ function resolveDashboardData(page: PageId, period: PeriodId, product: ProductId
     });
 
     let replenishmentLedger = [
-      { part: 'PART-111', desc: 'Valves', stock: 55, cover: '0.8d', action: 'Trigger expedite notice', urgency: 'critical', zone: 'critical', station: 'LW1' },
-      { part: 'PART-339', desc: 'Fasteners', stock: 320, cover: '2.1d', action: 'Review supplier transit route', urgency: 'warning', zone: 'warning', station: 'LW1' },
-      { part: 'PART-882', desc: 'Engine Gaskets', stock: 1400, cover: '8.4d', action: 'Replenishment order standard release', urgency: 'normal', zone: 'optimal', station: 'SF01' }
+      { part: '2002254-00-E06', desc: 'Matrix Core (MCU Side)', stock: 55, cover: '0.8d', action: 'Halt & check for Pedestal Missing', urgency: 'critical', zone: 'critical', station: 'LW-1' },
+      { part: '2002254-00-E08', desc: 'Matrix Plate (Sticker)', stock: 320, cover: '2.1d', action: 'Inspect for incomplete QR sticker', urgency: 'warning', zone: 'warning', station: 'ALT' },
+      { part: '2002254-00-E10', desc: 'Matrix Block (Laser)', stock: 1400, cover: '8.4d', action: 'Check laser grade variation', urgency: 'normal', zone: 'optimal', station: 'OP50 Q-GATE' },
+      { part: '2002254-00-E12', desc: 'Matrix Core (Brazed)', stock: 2200, cover: '14.2d', action: 'Release standard replenishment', urgency: 'normal', zone: 'overstock', station: 'Brazing' }
     ];
 
     if (isLW1) {
       replenishmentLedger = [
-        { part: 'PART-339', desc: 'Cap Screws', stock: 120, cover: '0.0d', action: 'Trigger Express Airfreight', urgency: 'critical', zone: 'critical', station: 'LW1' },
-        { part: 'PART-111', desc: 'Valves', stock: 45, cover: '0.2d', action: 'Initiate Hot-list production run', urgency: 'critical', zone: 'critical', station: 'LW1' },
-        { part: 'PART-654', desc: 'Brackets', stock: 80, cover: '0.4d', action: 'Diverting stock from warehouse B', urgency: 'critical', zone: 'critical', station: 'LW1' }
+        { part: '2002254-00-E06', desc: 'Matrix Core (MCU Side)', stock: 45, cover: '0.2d', action: 'Urgent batch containment for Pedestal Missing', urgency: 'critical', zone: 'critical', station: 'LW-1' },
+        { part: '2002254-00-E08', desc: 'Matrix Plate (Sticker)', stock: 120, cover: '0.0d', action: 'Expedite run & scan QR Sticker alignment', urgency: 'critical', zone: 'critical', station: 'LW-1' },
+        { part: '2002254-00-E10', desc: 'Matrix Block (Laser)', stock: 80, cover: '0.4d', action: 'Recalibrate laser marking intensity grades', urgency: 'critical', zone: 'critical', station: 'LW-1' }
       ];
     }
 
     const vendorDelayData = isLW1 
       ? [
-          { vendor: 'Krupp Steel Forge', delayDays: 4.2, color: T.red, machine: 'LW1' },
-          { vendor: 'Acme Castings', delayDays: 2.8, color: T.amber, machine: 'LW1' },
-          { vendor: 'SealTech Components', delayDays: 1.5, color: T.green, machine: 'LW1' }
+          { vendor: 'Krupp Steel Forge', delayDays: 4.2, color: T.red, machine: 'LW-1' },
+          { vendor: 'Acme Castings', delayDays: 2.8, color: T.amber, machine: 'LW-1' },
+          { vendor: 'SealTech Components', delayDays: 1.5, color: T.green, machine: 'LW-1' }
         ]
       : [
-          { vendor: 'Acme Castings', delayDays: 3.2, color: T.amber, machine: 'VMC1' },
-          { vendor: 'Krupp Steel Forge', delayDays: 1.8, color: T.green, machine: 'OP10' },
-          { vendor: 'SealTech Components', delayDays: 4.5, color: T.red, machine: 'SF01' }
+          { vendor: 'Acme Castings', delayDays: 3.2, color: T.amber, machine: 'OP50-01' },
+          { vendor: 'Krupp Steel Forge', delayDays: 1.8, color: T.green, machine: 'OP10-01' },
+          { vendor: 'SealTech Components', delayDays: 4.5, color: T.red, machine: 'Brazing' }
         ];
 
     const turnsPct = Math.min(100, penetrationIndex);
@@ -735,6 +722,13 @@ function resolveDashboardData(page: PageId, period: PeriodId, product: ProductId
     const wipPct = Math.min(100, demandAdherence);
 
     const targetValue = isLW1 ? 80 : (product === 'MATRIX' ? 95 : (product === 'BANANA' ? 85 : 90));
+
+    const replenishmentBacklogData = [
+      { supplier: 'Krupp Steel Forge',  minorDelay: 12, moderateDelay: 8,  criticalDelay: 5  },
+      { supplier: 'Acme Castings',      minorDelay: 4,  moderateDelay: 2,  criticalDelay: 0  },
+      { supplier: 'SealTech Components', minorDelay: 15, moderateDelay: 10, criticalDelay: 8  },
+      { supplier: 'SteelCorp India',    minorDelay: 2,  moderateDelay: 0,  criticalDelay: 0  }
+    ];
 
     return {
       penetrationIndex,
@@ -748,12 +742,12 @@ function resolveDashboardData(page: PageId, period: PeriodId, product: ProductId
       scheduleAdherenceData,
       bufferPenetrationStepData,
       partLevelVolatilityScatter,
-      cfdData,
       shortageDistribution,
       donutData,
       bufferPenetrationStackedData,
       replenishmentLedger,
       vendorDelayData,
+      replenishmentBacklogData,
       turnsPct,
       coverPct,
       wipPct,

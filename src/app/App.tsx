@@ -33,6 +33,8 @@ export default function App() {
     if (appState === 'executive') {
       return (
         <ExecutiveGateway
+          filters={filters}
+          onChange={setFilters}
           onEnterDashboard={(pageId) => {
             setCurrentPage(pageId);
             setAppState('app');
