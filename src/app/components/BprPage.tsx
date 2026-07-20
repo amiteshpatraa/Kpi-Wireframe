@@ -93,6 +93,9 @@ function isMtdWtd(eff: FilterState) {
 
 export function BprPage({ filters, onChange }: BprPageProps) {
   const [activePillar, setActivePillar] = useState<PillarId | null>(null);
+  const [q2Hovered, setQ2Hovered] = useState(false);
+  const [q3Hovered, setQ3Hovered] = useState(false);
+  const [q4Hovered, setQ4Hovered] = useState(false);
   // Per-card local filter locks: [SUMMARY, VOLATILITY, ADHERENCE, PENETRATION]
   const [q1Lock, q2Lock, q3Lock, q4Lock] = usePageCardLocks(filters, 4);
   const [selectedBufferZone, setSelectedBufferZone] = useState<string | null>(null);
@@ -202,10 +205,12 @@ export function BprPage({ filters, onChange }: BprPageProps) {
   }, [activeData.replenishmentLedger, selectedBufferZone]);
 
   const cardStyle = {
-    background: T.cardBg,
-    border: T.cardBorder,
-    boxShadow: T.cardShadow,
+    background: 'rgba(255,255,255,0.92)',
+    border: '1px solid rgba(226,232,240,0.7)',
+    boxShadow: '0 10px 30px -6px rgba(15,23,42,0.05), 0 4px 10px -4px rgba(15,23,42,0.04)',
     borderRadius: '16px',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
   };
 
   const centeredLegendStyle = {
@@ -874,8 +879,11 @@ export function BprPage({ filters, onChange }: BprPageProps) {
             {/* Quadrant 1: BPR Summary Index Card with Premium Golden-Yellow Glow */}
             <div
               onClick={() => { if (q1Lock.isLocked) onChange(q1Lock.effectiveFilters); setActivePillar('SUMMARY'); }}
-              className="bg-white rounded-2xl p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+              className="rounded-2xl p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between"
               style={{
+                background: 'rgba(255,255,255,0.92)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
                 boxShadow: q1Data.isWarning
                   ? '0 20px 40px -10px rgba(245, 158, 11, 0.35), 0 4px 20px rgba(245, 158, 11, 0.2), 0 0 0 1.5px rgba(239, 68, 68, 0.45)'
                   : '0 20px 40px -10px rgba(245, 158, 11, 0.35), 0 4px 20px rgba(245, 158, 11, 0.2), 0 0 0 1.5px rgba(245, 158, 11, 0.45)',
@@ -989,8 +997,10 @@ export function BprPage({ filters, onChange }: BprPageProps) {
             {/* Quadrant 2: SKU Lead-Time vs. Volatility Scatter or Grouped Columns */}
             <div
               onClick={() => { if (q2Lock.isLocked) onChange(q2Lock.effectiveFilters); setActivePillar('VOLATILITY'); }}
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg hover:border-amber-400 transition-all duration-300 cursor-pointer flex flex-col justify-between"
-              style={{ ...cardStyle, ...lockedCardStyle(q2Lock.isLocked) }}
+              className="rounded-2xl p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+              onMouseEnter={() => setQ2Hovered(true)}
+              onMouseLeave={() => setQ2Hovered(false)}
+              style={{ ...cardStyle, transform: q2Hovered ? 'translateY(-4px)' : 'none', border: q2Hovered ? '1px solid rgba(245,158,11,0.45)' : cardStyle.border, background: q2Hovered ? 'radial-gradient(circle at center, rgba(245,158,11,0.05) 0%, rgba(255,255,255,0.92) 80%)' : cardStyle.background, boxShadow: q2Hovered ? '0 20px 48px -12px rgba(245,158,11,0.22), 0 4px 16px -4px rgba(245,158,11,0.12)' : cardStyle.boxShadow, ...lockedCardStyle(q2Lock.isLocked) }}
             >
               <CardLockHeader
                 title={isMtdWtd(q2Lock.effectiveFilters) ? "Promised vs Actual Lead-Time" : "Demand Volatility vs Lead-Time"}
@@ -1044,8 +1054,10 @@ export function BprPage({ filters, onChange }: BprPageProps) {
             {/* Quadrant 3: Schedule Adherence (Double Spline curve) */}
             <div
               onClick={() => { if (q3Lock.isLocked) onChange(q3Lock.effectiveFilters); setActivePillar('ADHERENCE'); }}
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg hover:border-amber-400 transition-all duration-300 cursor-pointer flex flex-col justify-between"
-              style={{ ...cardStyle, ...lockedCardStyle(q3Lock.isLocked) }}
+              className="rounded-2xl p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+              onMouseEnter={() => setQ3Hovered(true)}
+              onMouseLeave={() => setQ3Hovered(false)}
+              style={{ ...cardStyle, transform: q3Hovered ? 'translateY(-4px)' : 'none', border: q3Hovered ? '1px solid rgba(245,158,11,0.45)' : cardStyle.border, background: q3Hovered ? 'radial-gradient(circle at center, rgba(245,158,11,0.05) 0%, rgba(255,255,255,0.92) 80%)' : cardStyle.background, boxShadow: q3Hovered ? '0 20px 48px -12px rgba(245,158,11,0.22), 0 4px 16px -4px rgba(245,158,11,0.12)' : cardStyle.boxShadow, ...lockedCardStyle(q3Lock.isLocked) }}
             >
               <CardLockHeader
                 title="Schedule Adherence"
@@ -1097,8 +1109,10 @@ export function BprPage({ filters, onChange }: BprPageProps) {
             {/* Quadrant 4: Penetration & Shortage Donut Risk or Stacked Column Chart */}
             <div
               onClick={() => { if (q4Lock.isLocked) onChange(q4Lock.effectiveFilters); setActivePillar('PENETRATION'); }}
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg hover:border-amber-400 transition-all duration-300 cursor-pointer flex flex-col justify-between"
-              style={{ ...cardStyle, ...lockedCardStyle(q4Lock.isLocked) }}
+              className="rounded-2xl p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+              onMouseEnter={() => setQ4Hovered(true)}
+              onMouseLeave={() => setQ4Hovered(false)}
+              style={{ ...cardStyle, transform: q4Hovered ? 'translateY(-4px)' : 'none', border: q4Hovered ? '1px solid rgba(245,158,11,0.45)' : cardStyle.border, background: q4Hovered ? 'radial-gradient(circle at center, rgba(245,158,11,0.05) 0%, rgba(255,255,255,0.92) 80%)' : cardStyle.background, boxShadow: q4Hovered ? '0 20px 48px -12px rgba(245,158,11,0.22), 0 4px 16px -4px rgba(245,158,11,0.12)' : cardStyle.boxShadow, ...lockedCardStyle(q4Lock.isLocked) }}
             >
               <CardLockHeader
                 title={isMtdWtd(q4Lock.effectiveFilters) ? "Penetration & Shortage Risk" : "Buffer Penetration Health"}

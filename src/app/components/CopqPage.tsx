@@ -198,6 +198,9 @@ function getSummaryTrendData(filters: FilterState) {
 export function CopqPage({ filters, onChange }: CopqPageProps) {
   const [currentView, setCurrentView] = useState<CopqView>('SUMMARY_CARD');
   const [activePillar, setActivePillar] = useState<PillarId>('SUMMARY');
+  const [q2Hovered, setQ2Hovered] = useState(false);
+  const [q3Hovered, setQ3Hovered] = useState(false);
+  const [q4Hovered, setQ4Hovered] = useState(false);
   
   // Per-card local filter locks: [Q1, Q2, Q3, Q4]
   const [q1Lock, q2Lock, q3Lock, q4Lock] = usePageCardLocks(filters, 4);
@@ -233,7 +236,7 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
     return `₹${(v / 100000).toFixed(1)} L`;
   };
 
-  const card = { background: T.cardBg, border: T.cardBorder, boxShadow: T.cardShadow, borderRadius: '16px' };
+  const card = { background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(226,232,240,0.7)', boxShadow: '0 10px 30px -6px rgba(15,23,42,0.05), 0 4px 10px -4px rgba(15,23,42,0.04)', borderRadius: '16px', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' };
 
   const commonLegendProps = {
     verticalAlign: 'bottom' as const,
@@ -300,7 +303,7 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
 
           {/* Q1: COPQ Summary Index with Premium Velvet Glow */}
           <div onClick={() => { if (q1Lock.isLocked) onChange(q1Lock.effectiveFilters); setCurrentView('SPLIT_SCREEN'); setActivePillar('SUMMARY'); }}
-            className="hover:scale-[1.005] transition-all duration-300 flex flex-col justify-between"
+            className="transition-all duration-300 flex flex-col justify-between"
             style={{
               ...card,
               padding: '24px',
@@ -347,8 +350,10 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
 
           {/* Q2: Internal Failure Index (Grouped-Stacked Shift Bars) */}
           <div onClick={() => { if (q2Lock.isLocked) onChange(q2Lock.effectiveFilters); setCurrentView('SPLIT_SCREEN'); setActivePillar('INTERNAL'); }}
-            className="hover:scale-[1.005] hover:border-slate-300 transition-all duration-300 flex flex-col justify-between"
-            style={{ ...card, padding: '24px', cursor: 'pointer', ...lockedCardStyle(q2Lock.isLocked) }}>
+            className="transition-all duration-300 flex flex-col justify-between"
+            onMouseEnter={() => setQ2Hovered(true)}
+            onMouseLeave={() => setQ2Hovered(false)}
+            style={{ ...card, padding: '24px', cursor: 'pointer', transform: q2Hovered ? 'translateY(-4px)' : 'none', border: q2Hovered ? '1px solid rgba(225,29,72,0.45)' : card.border, background: q2Hovered ? 'radial-gradient(circle at center, rgba(225,29,72,0.05) 0%, rgba(255,255,255,0.92) 80%)' : card.background, boxShadow: q2Hovered ? '0 20px 48px -12px rgba(225,29,72,0.22), 0 4px 16px -4px rgba(225,29,72,0.12)' : card.boxShadow, ...lockedCardStyle(q2Lock.isLocked) }}>
             <CardLockHeader
               eyebrow="Pillar 1"
               title="Internal Failure Index"
@@ -381,8 +386,10 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
 
           {/* Q3: External Failure Index */}
           <div onClick={() => { if (q3Lock.isLocked) onChange(q3Lock.effectiveFilters); setCurrentView('SPLIT_SCREEN'); setActivePillar('EXTERNAL'); }}
-            className="hover:scale-[1.005] hover:border-slate-300 transition-all duration-300 flex flex-col justify-between"
-            style={{ ...card, padding: '24px', cursor: 'pointer', ...lockedCardStyle(q3Lock.isLocked) }}>
+            className="transition-all duration-300 flex flex-col justify-between"
+            onMouseEnter={() => setQ3Hovered(true)}
+            onMouseLeave={() => setQ3Hovered(false)}
+            style={{ ...card, padding: '24px', cursor: 'pointer', transform: q3Hovered ? 'translateY(-4px)' : 'none', border: q3Hovered ? '1px solid rgba(217,119,6,0.45)' : card.border, background: q3Hovered ? 'radial-gradient(circle at center, rgba(217,119,6,0.05) 0%, rgba(255,255,255,0.92) 80%)' : card.background, boxShadow: q3Hovered ? '0 20px 48px -12px rgba(217,119,6,0.22), 0 4px 16px -4px rgba(217,119,6,0.12)' : card.boxShadow, ...lockedCardStyle(q3Lock.isLocked) }}>
             <CardLockHeader
               eyebrow="Pillar 2"
               title="External Failure Index"
@@ -424,8 +431,10 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
 
           {/* Q4: Prevention & Appraisal Index */}
           <div onClick={() => { if (q4Lock.isLocked) onChange(q4Lock.effectiveFilters); setCurrentView('SPLIT_SCREEN'); setActivePillar('PREVENTION'); }}
-            className="hover:scale-[1.005] hover:border-slate-300 transition-all duration-300 flex flex-col justify-between"
-            style={{ ...card, padding: '24px', cursor: 'pointer', ...lockedCardStyle(q4Lock.isLocked) }}>
+            className="transition-all duration-300 flex flex-col justify-between"
+            onMouseEnter={() => setQ4Hovered(true)}
+            onMouseLeave={() => setQ4Hovered(false)}
+            style={{ ...card, padding: '24px', cursor: 'pointer', transform: q4Hovered ? 'translateY(-4px)' : 'none', border: q4Hovered ? '1px solid rgba(5,150,105,0.45)' : card.border, background: q4Hovered ? 'radial-gradient(circle at center, rgba(5,150,105,0.05) 0%, rgba(255,255,255,0.92) 80%)' : card.background, boxShadow: q4Hovered ? '0 20px 48px -12px rgba(5,150,105,0.22), 0 4px 16px -4px rgba(5,150,105,0.12)' : card.boxShadow, ...lockedCardStyle(q4Lock.isLocked) }}>
             <CardLockHeader
               eyebrow="Pillar 3"
               title="Prevention & Appraisal"

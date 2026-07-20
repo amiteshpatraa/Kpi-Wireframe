@@ -1613,8 +1613,10 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                     onClick={() => onEnterDashboard(card.redirectTarget)}
                     onMouseEnter={() => setHoveredCardId(card.id)}
                     onMouseLeave={() => setHoveredCardId(null)}
-                    className="group relative overflow-hidden rounded-2xl bg-white/95 p-4 cursor-pointer shadow-md"
+                    className="group relative overflow-hidden rounded-2xl p-4 cursor-pointer shadow-md"
                     style={{
+                      backdropFilter: 'blur(16px)',
+                      WebkitBackdropFilter: 'blur(16px)',
                       boxShadow: showWarningHighlight
                         ? warningShadow
                         : (isHovered
@@ -1632,14 +1634,14 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                             : (card.id === 5
                               ? '1px solid rgba(245, 120, 139, 0.4)'
                               : `1px solid rgba(${card.rgb}, 0.4)`))
-                          : '1px solid rgba(226, 232, 240, 0.9)'),
+                          : '1px solid rgba(226, 232, 240, 0.6)'),
                       background: isHovered
                         ? (card.id === 1
-                          ? 'radial-gradient(circle at center, rgba(93, 28, 106, 0.08) 0%, #FFFFFF 85%)'
+                          ? 'radial-gradient(circle at center, rgba(93, 28, 106, 0.08) 0%, rgba(255,255,255,0.92) 85%)'
                           : (card.id === 5
-                            ? 'radial-gradient(circle at center, rgba(245, 120, 139, 0.08) 0%, #FFFFFF 85%)'
-                            : `radial-gradient(circle at center, rgba(${card.rgb}, 0.08) 0%, #FFFFFF 85%)`))
-                        : '#FFFFFF',
+                            ? 'radial-gradient(circle at center, rgba(245, 120, 139, 0.08) 0%, rgba(255,255,255,0.92) 85%)'
+                            : `radial-gradient(circle at center, rgba(${card.rgb}, 0.08) 0%, rgba(255,255,255,0.92) 85%)`))
+                        : 'rgba(255, 255, 255, 0.88)',
                       transform: isHovered ? 'translateY(-4px)' : 'none',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}

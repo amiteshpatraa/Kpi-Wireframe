@@ -57,7 +57,7 @@ export default function App() {
     };
 
     return (
-      <div className="flex h-screen w-screen bg-[#F8F9FA] overflow-hidden select-none">
+      <div className="flex h-screen w-screen overflow-hidden select-none" style={{ background: 'radial-gradient(ellipse at 15% 8%, rgba(219,225,255,0.45) 0%, transparent 50%), radial-gradient(ellipse at 88% 78%, rgba(209,250,229,0.28) 0%, transparent 52%), radial-gradient(ellipse at 55% 95%, rgba(224,231,255,0.22) 0%, transparent 45%), #EEF2F8' }}>
 
         {/* Workspace (Locked viewport height) */}
         <div className="flex-1 flex flex-col h-full overflow-hidden transition-all duration-300">

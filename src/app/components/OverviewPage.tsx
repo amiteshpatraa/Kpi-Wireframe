@@ -379,10 +379,12 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
   };
 
   const cardStyle = {
-    background: T.cardBg,
-    border: T.cardBorder,
-    boxShadow: T.cardShadow,
+    background: 'rgba(255,255,255,0.92)',
+    border: '1px solid rgba(226,232,240,0.7)',
+    boxShadow: '0 10px 30px -6px rgba(15,23,42,0.05), 0 4px 10px -4px rgba(15,23,42,0.04)',
     borderRadius: '16px',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
   };
 
   const commonLegendProps = {

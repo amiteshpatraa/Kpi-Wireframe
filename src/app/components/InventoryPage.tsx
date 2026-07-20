@@ -69,6 +69,9 @@ function getInventoryProfile(product: string | undefined, process: string | unde
 
 export function InventoryPage({ filters, onChange }: InventoryPageProps) {
   const [activePillar, setActivePillar] = useState<'SUMMARY' | 'FG' | 'WIP' | 'VELOCITY' | null>(null);
+  const [q2Hovered, setQ2Hovered] = useState(false);
+  const [q3Hovered, setQ3Hovered] = useState(false);
+  const [q4Hovered, setQ4Hovered] = useState(false);
   // Per-card local filter locks: [Q1, Q2, Q3, Q4]
   const [q1Lock, q2Lock, q3Lock, q4Lock] = usePageCardLocks(filters, 4);
 
@@ -86,10 +89,12 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
   };
 
   const cardStyle = {
-    background: T.cardBg,
-    border: T.cardBorder,
-    boxShadow: T.cardShadow,
+    background: 'rgba(255,255,255,0.92)',
+    border: '1px solid rgba(226,232,240,0.7)',
+    boxShadow: '0 10px 30px -6px rgba(15,23,42,0.05), 0 4px 10px -4px rgba(15,23,42,0.04)',
     borderRadius: '16px',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
   };
 
   const centeredLegendStyle = {
@@ -1367,8 +1372,10 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
             {/* Quadrant 2: Finished Goods Coverage */}
             <div
               onClick={() => { if (q2Lock.isLocked) onChange(q2Lock.effectiveFilters); setActivePillar('FG'); }}
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg hover:border-amber-400 transition-all duration-300 cursor-pointer flex flex-col justify-between"
-              style={{ ...cardStyle, ...lockedCardStyle(q2Lock.isLocked) }}
+              className="rounded-2xl p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+              onMouseEnter={() => setQ2Hovered(true)}
+              onMouseLeave={() => setQ2Hovered(false)}
+              style={{ ...cardStyle, transform: q2Hovered ? 'translateY(-4px)' : 'none', border: q2Hovered ? '1px solid rgba(20,184,166,0.45)' : cardStyle.border, background: q2Hovered ? 'radial-gradient(circle at center, rgba(20,184,166,0.05) 0%, rgba(255,255,255,0.92) 80%)' : cardStyle.background, boxShadow: q2Hovered ? '0 20px 48px -12px rgba(20,184,166,0.22), 0 4px 16px -4px rgba(20,184,166,0.12)' : cardStyle.boxShadow, ...lockedCardStyle(q2Lock.isLocked) }}
             >
               <CardLockHeader
                 title="FG Stock — Burn-Down Projection"
@@ -1404,19 +1411,15 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
             {/* Quadrant 3: WIP Coverage */}
             <div
               onClick={() => { if (q3Lock.isLocked) onChange(q3Lock.effectiveFilters); setActivePillar('WIP'); }}
-              className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer flex flex-col justify-between"
+              className="rounded-2xl p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+              onMouseEnter={() => setQ3Hovered(true)}
+              onMouseLeave={() => setQ3Hovered(false)}
               style={{
                 ...cardStyle,
-                border: filters.process === 'LW1'
-                  ? '2px solid rgba(239, 68, 68, 0.6)'
-                  : filters.process === 'VMC1'
-                  ? '2px solid rgba(16, 185, 129, 0.6)'
-                  : T.cardBorder,
-                boxShadow: filters.process === 'LW1'
-                  ? '0 0 15px rgba(239, 68, 68, 0.25)'
-                  : filters.process === 'VMC1'
-                  ? '0 0 15px rgba(16, 185, 129, 0.25)'
-                  : T.cardShadow,
+                transform: q3Hovered ? 'translateY(-4px)' : 'none',
+                border: q3Hovered ? '1px solid rgba(20,184,166,0.45)' : (filters.process === 'LW1' ? '2px solid rgba(239, 68, 68, 0.6)' : filters.process === 'VMC1' ? '2px solid rgba(16, 185, 129, 0.6)' : cardStyle.border),
+                boxShadow: q3Hovered ? '0 20px 48px -12px rgba(20,184,166,0.22), 0 4px 16px -4px rgba(20,184,166,0.12)' : (filters.process === 'LW1' ? '0 0 15px rgba(239, 68, 68, 0.25)' : filters.process === 'VMC1' ? '0 0 15px rgba(16, 185, 129, 0.25)' : cardStyle.boxShadow),
+                background: q3Hovered ? 'radial-gradient(circle at center, rgba(20,184,166,0.05) 0%, rgba(255,255,255,0.92) 80%)' : cardStyle.background,
                 ...lockedCardStyle(q3Lock.isLocked)
               }}
             >
@@ -1450,8 +1453,10 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
             {/* Quadrant 4: Throughput Velocity */}
             <div
               onClick={() => { if (q4Lock.isLocked) onChange(q4Lock.effectiveFilters); setActivePillar('VELOCITY'); }}
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg hover:border-amber-400 transition-all duration-300 cursor-pointer flex flex-col justify-between"
-              style={{ ...cardStyle, ...lockedCardStyle(q4Lock.isLocked) }}
+              className="rounded-2xl p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+              onMouseEnter={() => setQ4Hovered(true)}
+              onMouseLeave={() => setQ4Hovered(false)}
+              style={{ ...cardStyle, transform: q4Hovered ? 'translateY(-4px)' : 'none', border: q4Hovered ? '1px solid rgba(20,184,166,0.45)' : cardStyle.border, background: q4Hovered ? 'radial-gradient(circle at center, rgba(20,184,166,0.05) 0%, rgba(255,255,255,0.92) 80%)' : cardStyle.background, boxShadow: q4Hovered ? '0 20px 48px -12px rgba(20,184,166,0.22), 0 4px 16px -4px rgba(20,184,166,0.12)' : cardStyle.boxShadow, ...lockedCardStyle(q4Lock.isLocked) }}
             >
               <CardLockHeader
                 title="Cycle Time Scatter"

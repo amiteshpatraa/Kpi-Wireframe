@@ -122,9 +122,10 @@ export function FixedLeftFilterSidebar({ filters, onChange }: SidebarProps) {
       <div 
         onClick={() => setIsCollapsed(false)}
         className={cn(
-          'bg-white flex flex-col items-center justify-between h-full py-5 cursor-pointer transition-all duration-200 ease-in-out border-slate-200 shadow-[2px_0_12px_rgba(0,0,0,0.03)] hover:bg-slate-50',
+          'flex flex-col items-center justify-between h-full py-5 cursor-pointer transition-all duration-200 ease-in-out hover:bg-slate-50/80',
           isCollapsed ? 'w-12 opacity-100 border-r' : 'w-0 opacity-0 overflow-hidden border-r-0'
         )}
+        style={{ background: isCollapsed ? 'rgba(255,255,255,0.88)' : undefined, backdropFilter: isCollapsed ? 'blur(16px)' : undefined, WebkitBackdropFilter: isCollapsed ? 'blur(16px)' : undefined, borderRight: isCollapsed ? '1px solid rgba(203,213,225,0.6)' : undefined, boxShadow: isCollapsed ? '2px 0 16px rgba(15,23,42,0.04)' : undefined }}
       >
         <div className="flex flex-col items-center gap-8 min-w-[48px]">
           <Activity className="w-5 h-5 text-blue-600 shrink-0" strokeWidth={2.5} />
@@ -142,9 +143,10 @@ export function FixedLeftFilterSidebar({ filters, onChange }: SidebarProps) {
       {/* 1. Collapsible Sidebar Body Panel */}
       <div
         className={cn(
-          'bg-white border-r border-[#E2E8F0] flex flex-col h-full transition-all duration-200 ease-in-out shadow-[4px_0_24px_rgba(0,0,0,0.02)]',
+          'border-r flex flex-col h-full transition-all duration-200 ease-in-out',
           isCollapsed ? 'w-0 overflow-hidden opacity-0 border-r-0' : 'w-72 opacity-100'
         )}
+        style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRight: '1px solid rgba(203,213,225,0.55)', boxShadow: '4px 0 28px rgba(15,23,42,0.04)' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 whitespace-nowrap min-w-[288px]">

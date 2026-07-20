@@ -57,7 +57,7 @@ export function GlobalNavBar({ filters, onChange, currentPage, onNavigate }: Glo
   const ActiveIcon = activeOption?.icon;
 
   return (
-    <nav className="bg-white border-b border-slate-200 shadow-sm px-8 py-3 flex items-center justify-between z-50 sticky top-0">
+    <nav className="px-8 py-3 flex items-center justify-between z-50 sticky top-0" style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(203,213,225,0.55)', boxShadow: '0 1px 20px rgba(15,23,42,0.07), 0 0 0 0 transparent' }}>
       {/* Left: Brand & Dropdown Navigation */}
       <div className="flex items-center">
         {/* Brand Logo & Name */}
@@ -129,7 +129,8 @@ export function GlobalNavBar({ filters, onChange, currentPage, onNavigate }: Glo
               <select
                 value={filters.plant}
                 onChange={e => onChange({ ...filters, plant: e.target.value })}
-                className="appearance-none pl-2.5 pr-6 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-bold cursor-pointer hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-sm transition-all"
+                className="appearance-none pl-2.5 pr-6 py-1.5 text-xs border rounded-lg text-slate-700 font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                style={{ background: 'rgba(248,250,252,0.9)', border: '1px solid rgba(203,213,225,0.7)', boxShadow: '0 1px 4px rgba(15,23,42,0.04)' }}
               >
                 {plants.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
