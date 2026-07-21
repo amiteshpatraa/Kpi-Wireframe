@@ -374,14 +374,14 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
   }, [q1Otif.weeklyOutputData]);
 
   const prodStats = useMemo(() => {
-    const variances = weeklyOutputData.map(d => {
+    const variances = weeklyOutputData.map((d: any) => {
       const diff = d.actual - d.planned;
       return (diff / d.planned) * 100;
     });
-    const onPlan = variances.filter(v => Math.abs(v) <= 5).length;
-    const overThreshold = variances.filter(v => Math.abs(v) > 5).length;
+    const onPlan = variances.filter((v: number) => Math.abs(v) <= 5).length;
+    const overThreshold = variances.filter((v: number) => Math.abs(v) > 5).length;
     const maxVar = Math.max(...variances.map(Math.abs));
-    const avgVar = variances.reduce((s, v) => s + Math.abs(v), 0) / variances.length;
+    const avgVar = variances.reduce((s: number, v: number) => s + Math.abs(v), 0) / (variances.length || 1);
     return { onPlan, overThreshold, maxVar, avgVar };
   }, [weeklyOutputData]);
 
@@ -587,13 +587,13 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
 
             <div className="flex-grow" style={{ minHeight: '160px', padding: '24px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dispatchAdherenceData} layout="vertical" margin={{ top: 15, right: 15, left: -15, bottom: 5 }} barSize={timeLabels.length > 15 ? 4 : timeLabels.length > 10 ? 8 : 12}>
+                <BarChart data={dispatchAdherenceData} layout="vertical" barCategoryGap="25%" margin={{ top: 15, right: 15, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={T.tt} />
-                  <Bar dataKey="onTime" name="On-Time" stackId="a" fill="#EC6530" />
-                  <Bar dataKey="delayed" name="Delayed" stackId="a" fill="#FFAE6E" radius={[0, 2, 2, 0]} />
+                  <Bar dataKey="onTime" name="On-Time" stackId="a" fill="#EC6530" maxBarSize={22} />
+                  <Bar dataKey="delayed" name="Delayed" stackId="a" fill="#FFAE6E" radius={[0, 2, 2, 0]} maxBarSize={22} />
                   <Legend {...commonLegendProps} />
                 </BarChart>
               </ResponsiveContainer>
@@ -630,15 +630,15 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
 
             <div className="flex-grow" style={{ minHeight: '160px', padding: '24px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={productionPlanActualData} margin={{ top: 15, right: 5, left: -15, bottom: 5 }}>
+                <ComposedChart data={productionPlanActualData} barCategoryGap="25%" margin={{ top: 15, right: 5, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <YAxis yAxisId="left" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} domain={[50, 100]} />
                   <Tooltip contentStyle={T.tt} />
                   <ReferenceLine yAxisId="right" y={95} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Target SLA', position: 'insideTopRight', fill: '#EF4444', fontSize: 8 }} />
-                  <Bar yAxisId="left" dataKey="plan" name="Planned Output" fill="#CBD5E1" radius={[2, 2, 0, 0]} barSize={12} fillOpacity={0.6} />
-                  <Bar yAxisId="left" dataKey="actual" name="Actual Output" fill="#EC6530" radius={[2, 2, 0, 0]} barSize={12} />
+                  <Bar yAxisId="left" dataKey="plan" name="Planned Output" fill="#CBD5E1" radius={[2, 2, 0, 0]} maxBarSize={22} fillOpacity={0.6} />
+                  <Bar yAxisId="left" dataKey="actual" name="Actual Output" fill="#EC6530" radius={[2, 2, 0, 0]} maxBarSize={22} />
                   <Line yAxisId="right" type="monotone" dataKey="adherence" name="Schedule Adherence %" stroke="#EC6530" strokeWidth={2} dot={{ r: 4, fill: '#EC6530', strokeWidth: 0 }} label={{ position: 'top', fill: '#EC6530', fontSize: 8, fontWeight: 600, formatter: (v) => `${v}%` }} />
                   <Legend {...commonLegendProps} />
                 </ComposedChart>
@@ -738,9 +738,9 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                   {cardItem.id === 'DISPATCH' && (
                     <div style={{ height: '60px' }} className="mt-3">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={dispatchAdherenceData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }} barSize={6}>
-                          <Bar dataKey="onTime" stackId="a" fill="#EC6530" />
-                          <Bar dataKey="delayed" stackId="a" fill="#FFAE6E" radius={[1, 1, 0, 0]} />
+                        <BarChart data={dispatchAdherenceData} barCategoryGap="20%" margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+                          <Bar dataKey="onTime" stackId="a" fill="#EC6530" maxBarSize={22} />
+                          <Bar dataKey="delayed" stackId="a" fill="#FFAE6E" radius={[1, 1, 0, 0]} maxBarSize={22} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -749,9 +749,9 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                   {cardItem.id === 'PRODUCTION' && (
                     <div style={{ height: '60px' }} className="mt-3">
                       <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={productionPlanActualData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }} barGap={2}>
-                          <Bar dataKey="plan" fill="#FFE3E3" radius={[1, 1, 0, 0]} barSize={5} />
-                          <Bar dataKey="actual" fill="#EC6530" radius={[1, 1, 0, 0]} barSize={5} />
+                        <ComposedChart data={productionPlanActualData} barCategoryGap="20%" margin={{ top: 2, right: 2, left: 2, bottom: 2 }} barGap={2}>
+                          <Bar dataKey="plan" fill="#FFE3E3" radius={[1, 1, 0, 0]} maxBarSize={22} />
+                          <Bar dataKey="actual" fill="#EC6530" radius={[1, 1, 0, 0]} maxBarSize={22} />
                           <Line type="monotone" dataKey="adherence" stroke="#FFAE6E" strokeWidth={1} dot={false} />
                         </ComposedChart>
                       </ResponsiveContainer>
@@ -791,15 +791,15 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                   </div>
                   <div style={{ height: '280px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={chart1Data} barGap="-100%" margin={{ top: 15, right: 5, left: -15, bottom: 5 }}>
+                      <ComposedChart data={chart1Data} barCategoryGap="25%" margin={{ top: 15, right: 5, left: -15, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="left" label={{ value: 'Hours', angle: -90, position: 'insideLeft', offset: 10, fontSize: 8, fill: T.mutedColor }} tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="right" orientation="right" label={{ value: 'OTA %', angle: 90, position: 'insideRight', offset: 10, fontSize: 8, fill: T.mutedColor }} tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} domain={[50, 100]} />
                         <Tooltip contentStyle={T.tt} />
                         <ReferenceLine yAxisId="right" y={95} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'SLA Target: 95%', position: 'insideTopRight', fill: '#EF4444', fontSize: 8 }} />
-                        <Bar yAxisId="left" dataKey="plannedTransit" name="Planned Transit Time" fill="#FFE3E3" barSize={24} radius={[4, 4, 0, 0]} />
-                        <Bar yAxisId="left" dataKey="actualTransit" name="Actual Transit Time" fill="#FFAE6E" barSize={12} radius={[4, 4, 0, 0]} />
+                        <Bar yAxisId="left" dataKey="plannedTransit" name="Planned Transit Time" fill="#FFE3E3" maxBarSize={30} radius={[4, 4, 0, 0]} />
+                        <Bar yAxisId="left" dataKey="actualTransit" name="Actual Transit Time" fill="#FFAE6E" maxBarSize={22} radius={[4, 4, 0, 0]} />
                         <Line yAxisId="right" type="monotone" dataKey="ota" name="OTA %" stroke="#EC6530" strokeWidth={2} dot={{ r: 4, fill: '#EC6530', strokeWidth: 0 }} label={{ position: 'top', fill: '#EC6530', fontSize: 8, fontWeight: 600, formatter: (v) => `${v}%` }} />
                         <Legend {...commonLegendProps} />
                       </ComposedChart>
@@ -857,7 +857,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                   </div>
                   <div style={{ height: '300px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={weeklyProdDetails} margin={{ top: 10, right: 18, left: -22, bottom: 5 }} barGap={4}>
+                      <ComposedChart data={weeklyProdDetails} barCategoryGap="25%" margin={{ top: 10, right: 18, left: -22, bottom: 5 }} barGap={4}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="left" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
@@ -865,14 +865,14 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                         <Tooltip contentStyle={T.tt} />
                         
                         {/* Planned stack */}
-                        <Bar yAxisId="left" dataKey="pMachined" name="Planned Machined" stackId="plan" fill="#4988C4" />
-                        <Bar yAxisId="left" dataKey="pAssembled" name="Planned Assembled" stackId="plan" fill="#FFAE6E" />
-                        <Bar yAxisId="left" dataKey="pFabricated" name="Planned Fabricated" stackId="plan" fill="#FFE3E3" />
+                        <Bar yAxisId="left" dataKey="pMachined" name="Planned Machined" stackId="plan" fill="#4988C4" maxBarSize={22} />
+                        <Bar yAxisId="left" dataKey="pAssembled" name="Planned Assembled" stackId="plan" fill="#FFAE6E" maxBarSize={22} />
+                        <Bar yAxisId="left" dataKey="pFabricated" name="Planned Fabricated" stackId="plan" fill="#FFE3E3" maxBarSize={22} />
 
                         {/* Actual stack */}
-                        <Bar yAxisId="left" dataKey="aMachined" name="Actual Machined" stackId="actual" fill="url(#gSeries1)" />
-                        <Bar yAxisId="left" dataKey="aAssembled" name="Actual Assembled" stackId="actual" fill="url(#gSeries2)" />
-                        <Bar yAxisId="left" dataKey="aFabricated" name="Actual Fabricated" stackId="actual" fill="url(#gSeries3)" radius={[2, 2, 0, 0]} />
+                        <Bar yAxisId="left" dataKey="aMachined" name="Actual Machined" stackId="actual" fill="url(#gSeries1)" maxBarSize={22} />
+                        <Bar yAxisId="left" dataKey="aAssembled" name="Actual Assembled" stackId="actual" fill="url(#gSeries2)" maxBarSize={22} />
+                        <Bar yAxisId="left" dataKey="aFabricated" name="Actual Fabricated" stackId="actual" fill="url(#gSeries3)" radius={[2, 2, 0, 0]} maxBarSize={22} />
 
                         {/* Efficiencies */}
                         <Line yAxisId="right" type="monotone" dataKey="eff1" name="Machining Efficiency %" stroke="#EC6530" strokeWidth={2} dot={{ r: 3 }} />
@@ -892,14 +892,14 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                   </div>
                   <div style={{ height: '200px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={prodCategoryStack} margin={{ top: 2, right: 8, left: -22, bottom: 5 }} barSize={14}>
+                      <BarChart data={prodCategoryStack} barCategoryGap="25%" margin={{ top: 2, right: 8, left: -22, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="week" tick={{ fontSize: 7, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 7, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                         <Tooltip contentStyle={T.tt} />
-                        <Bar dataKey="machined"   name="Machined"   stackId="cat" fill="#EC6530" />
-                        <Bar dataKey="assembled"  name="Assembled"  stackId="cat" fill="#FFAE6E" />
-                        <Bar dataKey="fabricated" name="Fabricated" stackId="cat" fill="#8FDDDF" radius={[2,2,0,0]} />
+                        <Bar dataKey="machined"   name="Machined"   stackId="cat" fill="#EC6530" maxBarSize={22} />
+                        <Bar dataKey="assembled"  name="Assembled"  stackId="cat" fill="#FFAE6E" maxBarSize={22} />
+                        <Bar dataKey="fabricated" name="Fabricated" stackId="cat" fill="#8FDDDF" radius={[2,2,0,0]} maxBarSize={22} />
                         <Legend {...commonLegendProps} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -909,7 +909,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
             )}
 
             {/* C. Material & WIP Readiness Workspace */}
-            {(activePillar === 'READINESS' || activePillar === 'MATERIAL') && (
+            {(activePillar === 'READINESS') && (
               <>
                 {/* Row 1: WIP Accumulation by Station */}
                 <div style={{ ...card, borderRadius: '20px', padding: '24px' }} className="flex flex-col">

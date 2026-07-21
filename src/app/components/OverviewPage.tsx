@@ -472,23 +472,23 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
           );
         case 'AVAILABILITY':
           return (
-            <BarChart data={monthlyAvailabilityData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+            <BarChart data={monthlyAvailabilityData} barCategoryGap="25%" margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
               {renderGradientDefs()}
-              <Bar dataKey="avg_avail" fill="url(#oeeAvailGrad)" isAnimationActive={false} radius={[1, 1, 0, 0]} maxBarSize={16} />
+              <Bar dataKey="avg_avail" fill="url(#oeeAvailGrad)" isAnimationActive={false} radius={[1, 1, 0, 0]} maxBarSize={22} />
             </BarChart>
           );
         case 'PERFORMANCE':
           return (
-            <BarChart data={monthlyPerformanceData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+            <BarChart data={monthlyPerformanceData} barCategoryGap="25%" margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
               {renderGradientDefs()}
-              <Bar dataKey="actualVolume" fill="url(#oeePerfGrad)" isAnimationActive={false} radius={[1, 1, 0, 0]} maxBarSize={16} />
+              <Bar dataKey="actualVolume" fill="url(#oeePerfGrad)" isAnimationActive={false} radius={[1, 1, 0, 0]} maxBarSize={22} />
             </BarChart>
           );
         case 'QUALITY':
           return (
-            <BarChart data={monthlyQualityData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+            <BarChart data={monthlyQualityData} barCategoryGap="25%" margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
               {renderGradientDefs()}
-              <Bar dataKey="avg_fpy" fill="url(#oeeQualGrad)" isAnimationActive={false} radius={[1, 1, 0, 0]} maxBarSize={16} />
+              <Bar dataKey="avg_fpy" fill="url(#oeeQualGrad)" isAnimationActive={false} radius={[1, 1, 0, 0]} maxBarSize={22} />
             </BarChart>
           );
         default:
@@ -575,7 +575,7 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
         </div>
         <div style={{ height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={setupPmMonthlyData} margin={{ top: 15, right: 16, left: -20, bottom: 24 }}>
+            <ComposedChart data={setupPmMonthlyData} barCategoryGap="25%" margin={{ top: 15, right: 16, left: -20, bottom: 24 }}>
               {renderGradientDefs()}
               <defs>
                 <linearGradient id="areaSetup" x1="0" y1="0" x2="0" y2="1">
@@ -589,7 +589,7 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
               <Tooltip contentStyle={tooltipStyle} />
               <ReferenceLine y={50} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Target 50m', fill: '#EF4444', position: 'top', fontSize: 8, fontWeight: 'bold' }} />
               <Area type="monotone" dataKey="planned" name="Planned PM (m)" stroke="#00B574" strokeWidth={2} fill="url(#areaSetup)" dot={false} />
-              <Bar dataKey="actual" name="Actual PM (m)" fill="url(#redGrad)" radius={[3, 3, 0, 0]} maxBarSize={16} />
+              <Bar dataKey="actual" name="Actual PM (m)" fill="url(#redGrad)" radius={[3, 3, 0, 0]} maxBarSize={22} />
               <Legend {...commonLegendProps} />
             </ComposedChart>
           </ResponsiveContainer>
@@ -608,7 +608,7 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
         </div>
         <div style={{ height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={unplannedDowntimeTrendData} margin={{ top: 15, right: 16, left: -20, bottom: 24 }}>
+            <ComposedChart data={unplannedDowntimeTrendData} barCategoryGap="25%" margin={{ top: 15, right: 16, left: -20, bottom: 24 }}>
               {renderGradientDefs()}
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
@@ -616,7 +616,7 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
               <ReferenceLine yAxisId="right" y={30} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Target MTTR 30m', fill: '#EF4444', position: 'top', fontSize: 8, fontWeight: 'bold' }} />
-              <Bar yAxisId="left" dataKey="breakdown" name="Breakdown (m)" fill="url(#redGrad)" maxBarSize={16} />
+              <Bar yAxisId="left" dataKey="breakdown" name="Breakdown (m)" fill="url(#redGrad)" maxBarSize={22} />
               <Line yAxisId="right" type="monotone" dataKey="mttr" name="MTTR (m)" stroke="#EF4444" strokeWidth={2.5} dot={{ r: 3 }} />
               <Line yAxisId="right" type="monotone" dataKey="mtbf" name="MTBF (h)" stroke="#005CFF" strokeWidth={2.5} dot={{ r: 3 }} />
               <Legend {...commonLegendProps} />
@@ -657,14 +657,14 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
         </div>
         <div style={{ height: 320 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={cycleTaktStationData} margin={{ top: 15, right: 16, left: -20, bottom: 24 }}>
+            <ComposedChart data={cycleTaktStationData} barCategoryGap="25%" margin={{ top: 15, right: 16, left: -20, bottom: 24 }}>
               {renderGradientDefs()}
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} domain={[0, 60]} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="setup" name="Human Loading" fill="#ADC9FA" stackId="s" maxBarSize={16} />
-              <Bar dataKey="processing" name="Machine Process" stackId="s" maxBarSize={16}>
+              <Bar dataKey="setup" name="Human Loading" fill="#ADC9FA" stackId="s" maxBarSize={22} />
+              <Bar dataKey="processing" name="Machine Process" stackId="s" maxBarSize={22}>
                 {cycleTaktStationData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.total > entry.limit ? 'url(#redGrad)' : 'url(#blueGrad)'} />
                 ))}
@@ -690,14 +690,14 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
         </div>
         <div style={{ height: 260 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={monthlyOutputPerManData} margin={{ top: 15, right: 16, left: -20, bottom: 24 }}>
+            <ComposedChart data={monthlyOutputPerManData} barCategoryGap="25%" margin={{ top: 15, right: 16, left: -20, bottom: 24 }}>
               {renderGradientDefs()}
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} domain={[0, 600]} />
               <Tooltip contentStyle={tooltipStyle} />
               <ReferenceLine y={400} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Target 400 pcs/op', fill: '#EF4444', position: 'top', fontSize: 8, fontWeight: 'bold' }} />
-              <Bar dataKey="actual" name="Actual Productivity" fill="url(#blueGrad)" maxBarSize={16} />
+              <Bar dataKey="actual" name="Actual Productivity" fill="url(#blueGrad)" maxBarSize={22} />
               <Legend {...commonLegendProps} />
             </ComposedChart>
           </ResponsiveContainer>
@@ -773,13 +773,13 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
               </div>
               <div style={{ height: 200 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={selectedMonthMachinePareto} margin={{ top: 10, right: 0, left: -20, bottom: 24 }}>
+                  <BarChart data={selectedMonthMachinePareto} barCategoryGap="25%" margin={{ top: 10, right: 0, left: -20, bottom: 24 }}>
                     {renderGradientDefs()}
                     <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                     <XAxis dataKey="machine" tick={{ fontSize: 9, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={tooltipStyle} />
-                    <Bar dataKey="defects" name="Defects" fill="url(#vibrantOrangeGrad)" radius={[3, 3, 0, 0]} maxBarSize={16} />
+                    <Bar dataKey="defects" name="Defects" fill="url(#vibrantOrangeGrad)" radius={[3, 3, 0, 0]} maxBarSize={22} />
                     <Legend {...commonLegendProps} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -801,6 +801,7 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={monthlyReworkData}
+                    barCategoryGap="25%"
                     margin={{ top: 15, right: 0, left: -20, bottom: 24 }}
                     onClick={(d) => { if (d?.activeLabel) setSelectedQualityMonth(d.activeLabel); }}
                   >
@@ -810,8 +811,8 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
                     <YAxis tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={tooltipStyle} />
                     <ReferenceLine y={filters.subPeriod === 'yoy' ? 550 : 55} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: `Target ${filters.subPeriod === 'yoy' ? 550 : 55}`, fill: '#EF4444', position: 'top', fontSize: 8, fontWeight: 'bold' }} />
-                    <Bar dataKey="rework" name="Rework Count" fill="#FFAE6E" radius={[2, 2, 0, 0]} cursor="pointer" maxBarSize={10} />
-                    <Bar dataKey="planned" name="Planned Runs" fill="#1C4D8D" radius={[2, 2, 0, 0]} cursor="pointer" maxBarSize={10} />
+                    <Bar dataKey="rework" name="Rework Count" fill="#FFAE6E" radius={[2, 2, 0, 0]} cursor="pointer" maxBarSize={22} />
+                    <Bar dataKey="planned" name="Planned Runs" fill="#1C4D8D" radius={[2, 2, 0, 0]} cursor="pointer" maxBarSize={22} />
                     <Legend {...commonLegendProps} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -835,16 +836,16 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
         </div>
         <div style={{ height: 260 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={monthlyInHouseRejectionsData} margin={{ top: 15, right: 16, left: -20, bottom: 24 }}>
+            <BarChart data={monthlyInHouseRejectionsData} barCategoryGap="25%" margin={{ top: 15, right: 16, left: -20, bottom: 24 }}>
               {renderGradientDefs()}
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
               <ReferenceLine y={filters.subPeriod === 'yoy' ? 400 : 20} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: `Warning Limit ${filters.subPeriod === 'yoy' ? 400 : 20}`, fill: '#EF4444', position: 'top', fontSize: 8, fontWeight: 'bold' }} />
-              <Bar dataKey="burrs" name="Burrs" fill="#EC6530" stackId="rejections" maxBarSize={16} />
-              <Bar dataKey="blowHoles" name="Blow Holes" fill="#FFDA62" stackId="rejections" maxBarSize={16} />
-              <Bar dataKey="gaps" name="Gaps" fill="#FFAE6E" stackId="rejections" maxBarSize={16} />
+              <Bar dataKey="burrs" name="Burrs" fill="#EC6530" stackId="rejections" maxBarSize={22} />
+              <Bar dataKey="blowHoles" name="Blow Holes" fill="#FFDA62" stackId="rejections" maxBarSize={22} />
+              <Bar dataKey="gaps" name="Gaps" fill="#FFAE6E" stackId="rejections" maxBarSize={22} />
               <Legend {...commonLegendProps} />
             </BarChart>
           </ResponsiveContainer>
@@ -883,7 +884,7 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
 
             <div style={{ height: 340, width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={machineData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                <ComposedChart data={machineData} barCategoryGap="25%" margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
                   <defs>
                     <linearGradient id="corpAvailGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#1C4D8D" stopOpacity={1} />
@@ -912,13 +913,13 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
                   <Bar xAxisId={1} dataKey="capacity" fill="url(#capacityGrad)" barSize={44} radius={[4, 4, 0, 0]} name="Operating Capacity" isAnimationActive={false} />
 
                   {/* Three grouped metric pillars — Availability, Performance, Quality */}
-                  <Bar xAxisId={0} dataKey="uptime" name="Availability" fill="url(#corpAvailGrad)" barSize={7} radius={[2, 2, 0, 0]} isAnimationActive={false}>
+                  <Bar xAxisId={0} dataKey="uptime" name="Availability" fill="url(#corpAvailGrad)" maxBarSize={22} radius={[2, 2, 0, 0]} isAnimationActive={false}>
                     <LabelList dataKey="uptime" position="top" style={{ fontSize: 5, fill: '#64748B', fontWeight: 'bold' }} formatter={(v: number) => `${Math.round(v)}%`} />
                   </Bar>
-                  <Bar xAxisId={0} dataKey="actualVolume" name="Performance" fill="url(#corpPerfGrad)" barSize={7} radius={[2, 2, 0, 0]} isAnimationActive={false}>
+                  <Bar xAxisId={0} dataKey="actualVolume" name="Performance" fill="url(#corpPerfGrad)" maxBarSize={22} radius={[2, 2, 0, 0]} isAnimationActive={false}>
                     <LabelList dataKey="actualVolume" position="top" style={{ fontSize: 5, fill: '#64748B', fontWeight: 'bold' }} formatter={(v: number) => `${Math.round(v)}%`} />
                   </Bar>
-                  <Bar xAxisId={0} dataKey="yieldPass" name="Quality" fill="url(#corpQualGrad)" barSize={7} radius={[2, 2, 0, 0]} isAnimationActive={false}>
+                  <Bar xAxisId={0} dataKey="yieldPass" name="Quality" fill="url(#corpQualGrad)" maxBarSize={22} radius={[2, 2, 0, 0]} isAnimationActive={false}>
                     <LabelList dataKey="yieldPass" position="top" style={{ fontSize: 5, fill: '#64748B', fontWeight: 'bold' }} formatter={(v: number) => `${Math.round(v)}%`} />
                   </Bar>
 
@@ -1018,13 +1019,13 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
               onSync={q2Lock.unlock}
             >
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={q2Data.monthlyAvailability} margin={{ top: 12, right: -5, left: -35, bottom: 5 }}>
+                <ComposedChart data={q2Data.monthlyAvailability} barCategoryGap="25%" margin={{ top: 12, right: -5, left: -35, bottom: 5 }}>
                   {renderGradientDefs()}
                   <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 6, fill: '#94A3B8', fontWeight: 800 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 6, fill: '#94A3B8' }} axisLine={false} tickLine={false} domain={[0, 100]} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="avg_avail" name="Availability" fill="url(#oeeAvailGrad)" radius={[3, 3, 0, 0]} maxBarSize={16} />
+                  <Bar dataKey="avg_avail" name="Availability" fill="url(#oeeAvailGrad)" radius={[3, 3, 0, 0]} maxBarSize={22} />
                   <ReferenceLine y={q2Data.availTarget} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: `Target ${q2Data.availTarget}%`, fill: '#EF4444', position: 'top', fontSize: 7, fontWeight: 'bold' }} />
                   <Legend {...commonLegendProps} />
                 </ComposedChart>
@@ -1048,14 +1049,14 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
               onSync={q3Lock.unlock}
             >
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={q3Data.monthlyPerformance} margin={{ top: 12, right: -5, left: -35, bottom: 5 }}>
+                <ComposedChart data={q3Data.monthlyPerformance} barCategoryGap="25%" margin={{ top: 12, right: -5, left: -35, bottom: 5 }}>
                   {renderGradientDefs()}
                   <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 6, fill: '#94A3B8', fontWeight: 800 }} axisLine={false} tickLine={false} />
                   <YAxis yAxisId="left" tick={{ fontSize: 6, fill: '#94A3B8' }} axisLine={false} tickLine={false} domain={[0, 1800]} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 6, fill: '#94A3B8' }} axisLine={false} tickLine={false} domain={[0, 100]} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Bar yAxisId="left" dataKey="actualVolume" name="Actual Volume" fill="url(#oeePerfGrad)" radius={[3, 3, 0, 0]} maxBarSize={16} />
+                  <Bar yAxisId="left" dataKey="actualVolume" name="Actual Volume" fill="url(#oeePerfGrad)" radius={[3, 3, 0, 0]} maxBarSize={22} />
                   <Line yAxisId="right" type="monotone" dataKey="avg_perf" stroke="#FFA000" strokeWidth={1.5} dot={false} />
                   <ReferenceLine yAxisId="right" y={q3Data.perfTarget} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: `Target ${q3Data.perfTarget}%`, fill: '#EF4444', position: 'top', fontSize: 7, fontWeight: 'bold' }} />
                   <Legend {...commonLegendProps} />
@@ -1080,13 +1081,13 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
               onSync={q4Lock.unlock}
             >
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={q4Data.monthlyQuality} margin={{ top: 12, right: -5, left: -35, bottom: 5 }}>
+                <ComposedChart data={q4Data.monthlyQuality} barCategoryGap="25%" margin={{ top: 12, right: -5, left: -35, bottom: 5 }}>
                   {renderGradientDefs()}
                   <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 6, fill: '#94A3B8', fontWeight: 800 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 6, fill: '#94A3B8' }} axisLine={false} tickLine={false} domain={[0, 110]} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="avg_fpy" name="Quality Pass Rate" fill="url(#oeeQualGrad)" radius={[3, 3, 0, 0]} maxBarSize={16} />
+                  <Bar dataKey="avg_fpy" name="Quality Pass Rate" fill="url(#oeeQualGrad)" radius={[3, 3, 0, 0]} maxBarSize={22} />
                   <ReferenceLine y={q4Data.qualTarget} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: `Target ${q4Data.qualTarget}%`, fill: '#EF4444', position: 'top', fontSize: 7, fontWeight: 'bold' }} />
                   <Legend {...commonLegendProps} />
                 </ComposedChart>

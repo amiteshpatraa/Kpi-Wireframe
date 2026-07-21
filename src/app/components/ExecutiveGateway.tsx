@@ -150,7 +150,7 @@ const MiniChartTooltip = ({ active, payload, label, unit }: any) => {
 };
 
 // ── COMPACT KPI CARD COMPONENT FOR ISOMETRIC VIEW OVERLAYS ───────────────────
-function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing, onChartNodeClick }: {
+function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing, onChartNodeClick, isSpotlightActive }: {
   card: any;
   isHovered: boolean;
   onHover: (hovered: boolean) => void;
@@ -158,6 +158,7 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
   liveData: any;
   isPulsing: boolean;
   onChartNodeClick?: (month: string) => void;
+  isSpotlightActive?: boolean;
 }) {
   const Icon = card.icon;
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -219,7 +220,7 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
         : `0 12px 30px -10px rgba(15, 23, 42, 0.04), 0 0 15px 1px ${normalGlow}`),
     border: showWarningHighlight
       ? `2px solid ${warningColor}`
-      : '1px solid rgba(226, 232, 240, 0.8)',
+      : (isSpotlightActive ? `2px solid ${card.color}` : '1px solid rgba(226, 232, 240, 0.8)'),
     background: isHovered
       ? 'rgba(255, 255, 255, 0.88)'
       : 'rgba(255, 255, 255, 0.75)',
@@ -402,7 +403,7 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
             </ResponsiveContainer>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={card.chartData} margin={{ top: 10, right: 5, left: 16, bottom: 5 }}>
+              <BarChart data={card.chartData} barCategoryGap="25%" margin={{ top: 10, right: 5, left: 16, bottom: 5 }}>
                 <defs>
                   <linearGradient id={`barGradHover-${card.id}`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={card.color} />
@@ -417,7 +418,7 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
                 <Bar
                   dataKey="value"
                   radius={[2, 2, 0, 0]}
-                  maxBarSize={8}
+                  maxBarSize={22}
                   onMouseEnter={(data: any, state: any) => {
                     if (state && typeof state.activeIndex === 'number') {
                       setActiveIndex(state.activeIndex);
@@ -1515,27 +1516,6 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                   const isHovered = hoveredCardId === c.id;
                   const isSpotlightActive = c.id === activeSpotlightCardId;
                   const isPulsing = pulseStates[c.pulseKey];
-                  const isWarningActive = (() => {
-                    if (c.id === 1) return liveData.oee < 70;
-                    if (c.id === 3) return liveData.copqLoss > 3500000;
-                    if (c.id === 4) return liveData.daysOfSupply < 12.0;
-                    if (c.id === 5) return liveData.otif < 94.2;
-                    return false;
-                  })();
-                  const isWarning = isWarningActive && !isHovered;
-                  const warningColor = c.id === 4 ? '#F97316' : '#EF4444';
-                  const warningShadow = c.id === 4
-                    ? '0 15px 35px -5px rgba(249, 115, 22, 0.2), 0 0 15px 2px rgba(249, 115, 22, 0.15)'
-                    : '0 15px 35px -5px rgba(239, 68, 68, 0.2), 0 0 15px 2px rgba(239, 68, 68, 0.15)';
-
-                  // Float style with shadow matching the light-themed backdrop
-                  const cardShadow = isHovered
-                    ? (c.id === 1
-                      ? '0 20px 25px -5px rgba(93, 28, 106, 0.25), 0 10px 10px -5px rgba(93, 28, 106, 0.15)'
-                      : (c.id === 5
-                        ? '0 20px 25px -5px rgba(245, 120, 139, 0.25), 0 10px 10px -5px rgba(245, 120, 139, 0.15)'
-                        : `0 20px 25px -5px rgba(${c.rgb}, 0.15), 0 10px 10px -5px rgba(${c.rgb}, 0.05)`))
-                    : '0 8px 16px -6px rgba(15,23,42,0.08), 0 4px 8px -4px rgba(15,23,42,0.04)';
 
                   return (
                     <div
@@ -1550,26 +1530,16 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                         transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
                       }}
                     >
-                      <div
-                        style={{
-                          borderRadius: '16px',
-                          boxShadow: isWarning ? warningShadow : cardShadow,
-                          border: isWarning
-                            ? `2px solid ${warningColor}`
-                            : (isSpotlightActive ? `2px solid ${c.color}` : '1px solid rgba(226, 232, 240, 0.8)'),
-                          transition: 'all 0.4s ease'
-                        }}
-                      >
-                        <CompactKPICard
-                          card={c}
-                          isHovered={isHovered}
-                          onHover={(hover) => setHoveredCardId(hover ? c.id : null)}
-                          onClick={() => onEnterDashboard(c.redirectTarget)}
-                          liveData={liveData}
-                          isPulsing={isPulsing}
-                          onChartNodeClick={(monthName) => handleChartNodeClick(monthName, c.redirectTarget)}
-                        />
-                      </div>
+                      <CompactKPICard
+                        card={c}
+                        isHovered={isHovered}
+                        onHover={(hover) => setHoveredCardId(hover ? c.id : null)}
+                        onClick={() => onEnterDashboard(c.redirectTarget)}
+                        liveData={liveData}
+                        isPulsing={isPulsing}
+                        onChartNodeClick={(monthName) => handleChartNodeClick(monthName, c.redirectTarget)}
+                        isSpotlightActive={isSpotlightActive}
+                      />
                     </div>
                   );
                 });
@@ -1804,6 +1774,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart
                             data={card.chartData}
+                            barCategoryGap="25%"
                             margin={{ top: 10, right: 5, left: 12, bottom: 0 }}
                           >
                             <defs>
@@ -1839,7 +1810,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                             <Bar
                               dataKey="value"
                               radius={[2, 2, 0, 0]}
-                              maxBarSize={10}
+                              maxBarSize={22}
                               onMouseEnter={(data: any, state: any) => {
                                 setGridHoveredCardId(card.id);
                                 if (state && typeof state.activeIndex === 'number') {

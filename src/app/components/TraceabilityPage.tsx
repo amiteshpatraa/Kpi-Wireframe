@@ -950,14 +950,14 @@ export function TraceabilityPage({ filters, onChange }: TraceabilityPageProps) {
                   </div>
                   <div style={{ height: '220px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={breachLineStack} margin={{ top: 2, right: 4, left: -10, bottom: 5 }} barSize={20}>
+                      <BarChart data={breachLineStack} barCategoryGap="25%" margin={{ top: 2, right: 4, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                         <XAxis dataKey="q" tick={{ fontSize: 7, fill: SLATE, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 7, fill: SLATE }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
                         <Tooltip contentStyle={TT} formatter={(v: number) => [`$${v.toLocaleString()}`, '']} />
-                        <Bar dataKey="line1" name="Line 1" stackId="brk" fill={EMERALD} />
-                        <Bar dataKey="line2" name="Line 2" stackId="brk" fill={RED} />
-                        <Bar dataKey="line3" name="Line 3" stackId="brk" fill={AMBER} radius={[3,3,0,0]} />
+                        <Bar dataKey="line1" name="Line 1" stackId="brk" fill={EMERALD} maxBarSize={28} />
+                        <Bar dataKey="line2" name="Line 2" stackId="brk" fill={RED} maxBarSize={28} />
+                        <Bar dataKey="line3" name="Line 3" stackId="brk" fill={AMBER} radius={[3,3,0,0]} maxBarSize={28} />
                         <Legend {...commonLegendProps} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -1023,12 +1023,12 @@ export function TraceabilityPage({ filters, onChange }: TraceabilityPageProps) {
                   </div>
                   <div style={{ height: '220px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={scannerPerf} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <BarChart data={scannerPerf} layout="vertical" barCategoryGap="25%" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
                         <XAxis type="number" domain={[80, 100]} tick={{ fontSize: 7, fill: SLATE }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}%`} />
                         <YAxis type="category" dataKey="device" tick={{ fontSize: 8, fill: SLATE, fontWeight: 700 }} axisLine={false} tickLine={false} width={110} />
                         <Tooltip contentStyle={TT} formatter={(v: number) => [`${v}%`, 'First Scan Rate']} />
-                        <Bar dataKey="firstScan" name="First-Scan Success %" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                        <Bar dataKey="firstScan" name="First-Scan Success %" radius={[0, 4, 4, 0]} maxBarSize={28}>
                           {scannerPerf.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.firstScan >= 96 ? EMERALD : entry.firstScan >= 92 ? COBALT : AMBER} />
                           ))}
@@ -1047,7 +1047,7 @@ export function TraceabilityPage({ filters, onChange }: TraceabilityPageProps) {
                   </div>
                   <div style={{ height: '220px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={failureCategories} margin={{ top: 5, right: 20, left: -10, bottom: 24 }} barSize={28}>
+                      <BarChart data={failureCategories} barCategoryGap="25%" margin={{ top: 5, right: 20, left: -10, bottom: 24 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                         <XAxis dataKey="cause" tick={{ fontSize: 7.5, fill: SLATE, fontWeight: 700 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 7, fill: SLATE }} axisLine={false} tickLine={false} />

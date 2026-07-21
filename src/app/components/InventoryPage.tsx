@@ -696,9 +696,9 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
           )}
           {pillar.id === 'WIP' && (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={localWipWaterfall} margin={{ top: 2, right: 2, left: -40, bottom: 2 }}>
+              <BarChart data={localWipWaterfall} barCategoryGap="25%" margin={{ top: 2, right: 2, left: -40, bottom: 2 }}>
                 <Bar dataKey="base" stackId="wf" fill="transparent" legendType="none" />
-                <Bar dataKey="value" stackId="wf" maxBarSize={6}>
+                <Bar dataKey="value" stackId="wf" maxBarSize={22}>
                   {localWipWaterfall.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.isAdd ? "#B45309" : "#14B8A6"} />
                   ))}
@@ -896,7 +896,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
           </div>
           <div style={{ height: 240, width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={fgBurndownData} margin={{ top: 15, right: 24, left: -10, bottom: 10 }}>
+              <ComposedChart data={fgBurndownData} barCategoryGap="25%" margin={{ top: 15, right: 24, left: -10, bottom: 10 }}>
                 <defs>
                   <linearGradient id="burndownGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={GOLD} stopOpacity={0.35} />
@@ -930,7 +930,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
           <div className="border-b border-slate-100 pb-3 mb-4 flex justify-between items-center">
             <div>
               <span className="text-[10px] font-black text-teal-600 tracking-widest uppercase">WIP Ridgeline Flow — Stage Pulse</span>
-              <p className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">Independent baselines · each wave = one stage · coral glow = bottleneck alert</p>
+              <p className="text-[8px] text-slate-400 font-bold uppercase mt-0.5 font-semibold">Independent baselines · each wave = one stage · coral glow = bottleneck alert</p>
             </div>
             <div className="flex flex-col items-end gap-0.5">
               <span className="text-[10px] font-black text-teal-600">5 Stages</span>
@@ -1018,7 +1018,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
 
           <div style={{ height: 280, width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={fgAgingData} margin={{ top: 20, right: 10, left: -20, bottom: 10 }}>
+              <ComposedChart data={fgAgingData} barCategoryGap="25%" margin={{ top: 20, right: 10, left: -20, bottom: 10 }}>
                 <defs>
                   <linearGradient id="fgTealGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#14B8A6" stopOpacity={1} />
@@ -1030,7 +1030,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
                 <YAxis yAxisId="left" tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} label={{ value: 'FG Volume', angle: -90, position: 'insideLeft', offset: 20, fontSize: 7, fill: '#94A3B8' }} />
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} tickFormatter={formatValuation} label={{ value: 'Holding Cost', angle: 90, position: 'insideRight', offset: 10, fontSize: 7, fill: '#94A3B8' }} />
                 <Tooltip contentStyle={TT} formatter={(v: any, n: string) => [n === 'Holding Cost' ? formatValuation(v) : `${v} units`, n]} />
-                <Bar yAxisId="left" dataKey="fgVolume" name="FG Volume" fill="url(#fgTealGrad)" maxBarSize={16} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                <Bar yAxisId="left" dataKey="fgVolume" name="FG Volume" fill="url(#fgTealGrad)" maxBarSize={30} radius={[4, 4, 0, 0]} isAnimationActive={false} />
                 <Line yAxisId="right" type="monotone" dataKey="cost" name="Holding Cost" stroke="#F59E0B" strokeWidth={2.5} dot={{ r: 5, fill: '#F59E0B', stroke: 'white', strokeWidth: 1.5 }} isAnimationActive={false} />
                 <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
               </ComposedChart>
@@ -1080,7 +1080,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
         </div>
         <div style={{ height: 260, width: '100%' }}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={dynamicWipData} margin={{ top: 20, right: 40, left: -10, bottom: 10 }}>
+            <ComposedChart data={dynamicWipData} barCategoryGap="25%" margin={{ top: 20, right: 40, left: -10, bottom: 10 }}>
               <defs>
                 <linearGradient id="wipTealGradLocal" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#14B8A6" stopOpacity={1} />
@@ -1094,7 +1094,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
               <Tooltip contentStyle={TT} formatter={(v: any, n: string) => [n === 'Avg Dwell Time' ? `${v}h` : `${v} units`, n]} />
               <ReferenceLine yAxisId="left" y={invProfile.maxBuffer} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5}
                 label={{ value: `Max Buffer Limit ${invProfile.maxBuffer}`, fill: '#EF4444', fontSize: 7, fontWeight: 'bold', position: 'insideTopRight' }} />
-              <Bar yAxisId="left" dataKey="wipUnits" name="WIP Units" fill="url(#wipTealGradLocal)" maxBarSize={16} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+              <Bar yAxisId="left" dataKey="wipUnits" name="WIP Units" fill="url(#wipTealGradLocal)" maxBarSize={22} radius={[4, 4, 0, 0]} isAnimationActive={false} />
               <Line yAxisId="right" type="monotone" dataKey="avgDwellHours" name="Avg Dwell Time" stroke="#F5788B" strokeWidth={2.5} dot={{ r: 5, fill: '#F5788B', stroke: 'white', strokeWidth: 1.5 }} isAnimationActive={false} />
               <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
             </ComposedChart>
@@ -1114,15 +1114,15 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
           </div>
           <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={wipAging} layout="vertical" margin={{ top: 10, right: 24, left: 10, bottom: 10 }}>
+              <BarChart data={wipAging} layout="vertical" barCategoryGap="25%" margin={{ top: 10, right: 24, left: 10, bottom: 10 }}>
                 <GradDefs />
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} unit=" units" />
                 <YAxis dataKey="station" type="category" tick={{ fontSize: 9, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={TT} />
-                <Bar dataKey="fresh"    name="Fresh (<24h)"    fill={EMERALD} stackId="age" />
-                <Bar dataKey="standard" name="Standard (24-48h)" fill={AMBER}   stackId="age" />
-                <Bar dataKey="delayed"  name="Delayed (>48h)"  fill={RED}     stackId="age" radius={[0, 3, 3, 0]} />
+                <Bar dataKey="fresh"    name="Fresh (<24h)"    fill={EMERALD} stackId="age" maxBarSize={22} />
+                <Bar dataKey="standard" name="Standard (24-48h)" fill={AMBER}   stackId="age" maxBarSize={22} />
+                <Bar dataKey="delayed"  name="Delayed (>48h)"  fill={RED}     stackId="age" radius={[0, 3, 3, 0]} maxBarSize={22} />
                 <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
               </BarChart>
             </ResponsiveContainer>

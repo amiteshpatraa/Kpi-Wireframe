@@ -247,7 +247,7 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
   };
 
   const renderShiftBars = (cardFilters: FilterState) => {
-    return <Bar dataKey="totalLoss" name="COPQ Loss" fill="#7C3AED" radius={[3, 3, 0, 0]} maxBarSize={16} />;
+    return <Bar dataKey="totalLoss" name="COPQ Loss" fill="#7C3AED" radius={[3, 3, 0, 0]} maxBarSize={22} />;
   };
 
   // ── CONSTANTS FOR TABLES ──────────────────────────────────────────────────
@@ -371,7 +371,7 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
             />
             <div className="flex-grow" style={{ minHeight: '160px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={q2Data} margin={{ top: 5, right: 0, left: -38, bottom: 5 }}>
+                <BarChart data={q2Data} barCategoryGap="25%" margin={{ top: 5, right: 0, left: -38, bottom: 5 }}>
                   {renderGradientDefs()}
                   <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 7, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
@@ -452,7 +452,7 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
             />
             <div className="flex-grow" style={{ minHeight: '160px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={q4Data} margin={{ top: 5, right: -10, left: -38, bottom: 5 }}>
+                <ComposedChart data={q4Data} barCategoryGap="25%" margin={{ top: 5, right: -10, left: -38, bottom: 5 }}>
                   {renderGradientDefs()}
                   <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 7, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
@@ -655,14 +655,14 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
                   </div>
                   <div style={{ height: '240px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={getSummaryTrendData(q1Lock.effectiveFilters)} margin={{ top: 5, right: 30, left: -10, bottom: 5 }}>
+                      <BarChart data={getSummaryTrendData(q1Lock.effectiveFilters)} barCategoryGap="25%" margin={{ top: 5, right: 30, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 7, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 7, fill: T.mutedColor }} axisLine={false} tickLine={false} tickFormatter={(v) => v === 0 ? '₹0' : `₹${Math.round(v / 100000)} L`} />
                         <Tooltip contentStyle={T.tt} formatter={(v: number) => [formatLoss(v), '']} />
-                        <Bar dataKey="Internal Failure" fill="#8B5CF6" stackId="losses" maxBarSize={16} />
-                        <Bar dataKey="External Failure" fill="#F59E0B" stackId="losses" maxBarSize={16} />
-                        <Bar dataKey="Prevention & Appraisal" fill="#10B981" stackId="losses" maxBarSize={16} />
+                        <Bar dataKey="Internal Failure" fill="#8B5CF6" stackId="losses" maxBarSize={22} />
+                        <Bar dataKey="External Failure" fill="#F59E0B" stackId="losses" maxBarSize={22} />
+                        <Bar dataKey="Prevention & Appraisal" fill="#10B981" stackId="losses" maxBarSize={22} />
                         <Legend {...commonLegendProps} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -686,7 +686,7 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
                   </div>
                   <div style={{ height: '240px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={q2Data} margin={{ top: 5, right: 30, left: -10, bottom: 5 }}>
+                      <BarChart data={q2Data} barCategoryGap="25%" margin={{ top: 5, right: 30, left: -10, bottom: 5 }}>
                         {renderGradientDefs()}
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 7, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
@@ -708,13 +708,13 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
                   </div>
                   <div style={{ height: '250px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={getDefectTaxonomyPareto(q2Lock.effectiveFilters)} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <ComposedChart data={getDefectTaxonomyPareto(q2Lock.effectiveFilters)} barCategoryGap="25%" margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="type" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="left" name="Count" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="right" orientation="right" name="Carrying Cost" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} tickFormatter={(v) => formatLoss(v)} />
                         <Tooltip contentStyle={T.tt} formatter={(value: any, name: string) => name === 'Carrying Cost' ? [formatLoss(value), name] : [value, name]} />
-                        <Bar yAxisId="left" dataKey="count" name="Defect Count" fill="url(#gCrimsonBar)" maxBarSize={16} radius={[3, 3, 0, 0]} />
+                        <Bar yAxisId="left" dataKey="count" name="Defect Count" fill="url(#gCrimsonBar)" maxBarSize={30} radius={[3, 3, 0, 0]} />
                         <Line yAxisId="right" type="monotone" dataKey="carryingCost" name="Carrying Cost" stroke="#F59E0B" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                         <Legend {...commonLegendProps} />
                       </ComposedChart>
@@ -767,13 +767,13 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
                   </div>
                   <div style={{ height: '240px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={q3Data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <ComposedChart data={q3Data} barCategoryGap="25%" margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="left" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} tickFormatter={(v) => formatLoss(v)} />
                         <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} unit="d" />
                         <Tooltip contentStyle={T.tt} formatter={(value: any, name: string) => name === 'Claim Cost' ? [formatLoss(value), name] : [`${value} days`, name]} />
-                        <Bar yAxisId="left" dataKey="actual" name="Claim Cost" fill="url(#orangeGrad)" maxBarSize={16} radius={[3, 3, 0, 0]} />
+                        <Bar yAxisId="left" dataKey="actual" name="Claim Cost" fill="url(#orangeGrad)" maxBarSize={22} radius={[3, 3, 0, 0]} />
                         <Line yAxisId="right" type="monotone" dataKey="lagDays" name="Avg Lag Time" stroke="#EF4444" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                         <Legend {...commonLegendProps} />
                       </ComposedChart>

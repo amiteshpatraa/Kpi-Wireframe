@@ -469,15 +469,15 @@ export function BprPage({ filters, onChange }: BprPageProps) {
         </div>
         <div className="h-[260px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={activeData.bufferPenetrationStackedData} margin={{ top: 15, right: 24, left: -20, bottom: 10 }}>
+            <BarChart data={activeData.bufferPenetrationStackedData} barCategoryGap="25%" margin={{ top: 15, right: 24, left: -20, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 800 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 8, fill: T.mutedColor }} tickFormatter={(v) => `${v}%`} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={T.tt} formatter={(value: number) => [`${value}%`]} />
-              <Bar dataKey="critical" name="Critical Stockout" stackId="a" fill="#EF4444" />
-              <Bar dataKey="warning" name="Warning/Reorder" stackId="a" fill="#F59E0B" />
-              <Bar dataKey="optimal" name="Optimal/Safe" stackId="a" fill="#10B981" />
-              <Bar dataKey="overstock" name="Overstock" stackId="a" fill="#3B82F6" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="critical" name="Critical Stockout" stackId="a" fill="#EF4444" maxBarSize={22} />
+              <Bar dataKey="warning" name="Warning/Reorder" stackId="a" fill="#F59E0B" maxBarSize={22} />
+              <Bar dataKey="optimal" name="Optimal/Safe" stackId="a" fill="#10B981" maxBarSize={22} />
+              <Bar dataKey="overstock" name="Overstock" stackId="a" fill="#3B82F6" radius={[3, 3, 0, 0]} maxBarSize={22} />
               <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
             </BarChart>
           </ResponsiveContainer>
@@ -509,7 +509,7 @@ export function BprPage({ filters, onChange }: BprPageProps) {
           </div>
           <div className="h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activeData.replenishmentBacklogData} margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
+              <BarChart data={activeData.replenishmentBacklogData} barCategoryGap="25%" margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
                 <defs>
                   <linearGradient id="yellowBacklog" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#FFDA62" stopOpacity={1} />
@@ -528,9 +528,9 @@ export function BprPage({ filters, onChange }: BprPageProps) {
                 <XAxis dataKey="supplier" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 8, fill: '#64748B' }} ticks={[0, 10, 20, 30, 40]} domain={[0, 40]} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={T.tt} />
-                <Bar dataKey="minorDelay" name="0-3 Days Overdue" stackId="a" fill="url(#yellowBacklog)" maxBarSize={24} />
-                <Bar dataKey="moderateDelay" name="4-7 Days Overdue" stackId="a" fill="url(#orangeBacklog)" maxBarSize={24} />
-                <Bar dataKey="criticalDelay" name="8+ Days Overdue (Critical)" stackId="a" fill="url(#crimsonBacklog)" radius={[4, 4, 0, 0]} maxBarSize={24} />
+                <Bar dataKey="minorDelay" name="0-3 Days Overdue" stackId="a" fill="url(#yellowBacklog)" maxBarSize={30} />
+                <Bar dataKey="moderateDelay" name="4-7 Days Overdue" stackId="a" fill="url(#orangeBacklog)" maxBarSize={30} />
+                <Bar dataKey="criticalDelay" name="8+ Days Overdue (Critical)" stackId="a" fill="url(#crimsonBacklog)" radius={[4, 4, 0, 0]} maxBarSize={30} />
                 <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
               </BarChart>
             </ResponsiveContainer>
@@ -1015,13 +1015,13 @@ export function BprPage({ filters, onChange }: BprPageProps) {
               <div className="h-[180px] w-full mt-4">
                 {isMtdWtd(q2Lock.effectiveFilters) ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={q2PromisedActualData} margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
+                    <BarChart data={q2PromisedActualData} barCategoryGap="25%" margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                       <XAxis dataKey="supplier" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 8, fill: '#64748B' }} unit="d" axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={T.tt} />
-                      <Bar dataKey="promised" name="Promised LT" fill="#4988C4" radius={[3, 3, 0, 0]} />
-                      <Bar dataKey="actual" name="Actual LT" fill="#FFAE6E" radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="promised" name="Promised LT" fill="#4988C4" radius={[3, 3, 0, 0]} maxBarSize={32} />
+                      <Bar dataKey="actual" name="Actual LT" fill="#FFAE6E" radius={[3, 3, 0, 0]} maxBarSize={32} />
                       <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -1071,13 +1071,13 @@ export function BprPage({ filters, onChange }: BprPageProps) {
               />
               <div className="h-[180px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={q3AdherenceDataWithVolume} margin={{ top: 10, right: -5, left: -25, bottom: 5 }}>
+                  <ComposedChart data={q3AdherenceDataWithVolume} barCategoryGap="25%" margin={{ top: 10, right: -5, left: -25, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
                     <YAxis yAxisId="left" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} />
                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} domain={[50, 100]} />
                     <Tooltip contentStyle={T.tt} />
-                    <Bar yAxisId="left" dataKey="ordersDispatched" name="Total Orders" fill="#4988C4" radius={[3, 3, 0, 0]} maxBarSize={20} />
+                    <Bar yAxisId="left" dataKey="ordersDispatched" name="Total Orders" fill="#4988C4" radius={[3, 3, 0, 0]} maxBarSize={32} />
                     <Line 
                       yAxisId="right"
                       type="monotone" 
@@ -1159,15 +1159,15 @@ export function BprPage({ filters, onChange }: BprPageProps) {
                 ) : (
                   <div className="h-[180px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={q4Data.bufferPenetrationStackedData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
+                      <BarChart data={q4Data.bufferPenetrationStackedData} barCategoryGap="25%" margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 800 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 8, fill: T.mutedColor }} tickFormatter={(v) => `${v}%`} axisLine={false} tickLine={false} />
                         <Tooltip contentStyle={T.tt} formatter={(value: number) => [`${value}%`]} />
-                        <Bar dataKey="critical" name="Critical Stockout" stackId="a" fill="#EF4444" />
-                        <Bar dataKey="warning" name="Warning/Reorder" stackId="a" fill="#F59E0B" />
-                        <Bar dataKey="optimal" name="Optimal/Safe" stackId="a" fill="#10B981" />
-                        <Bar dataKey="overstock" name="Overstock" stackId="a" fill="#3B82F6" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="critical" name="Critical Stockout" stackId="a" fill="#EF4444" maxBarSize={32} />
+                        <Bar dataKey="warning" name="Warning/Reorder" stackId="a" fill="#F59E0B" maxBarSize={32} />
+                        <Bar dataKey="optimal" name="Optimal/Safe" stackId="a" fill="#10B981" maxBarSize={32} />
+                        <Bar dataKey="overstock" name="Overstock" stackId="a" fill="#3B82F6" radius={[3, 3, 0, 0]} maxBarSize={32} />
                         <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
                       </BarChart>
                     </ResponsiveContainer>
