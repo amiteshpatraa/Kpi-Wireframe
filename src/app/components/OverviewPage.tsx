@@ -1,6 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useFilter } from '../contexts/FilterContext';
-import { getDashboardData } from '../data/dashboardDataStore';
+import { getDashboardData } from '../data/dataStores';
+import {
+  PILLARS,
+  STATIONS_LIST,
+  MONTHLY_MACHINE_DEFECTS,
+  resolveMachineOeeData,
+  type ActivePillar
+} from '../data/dataStores/oeeDataStore';
 import { OeeSummaryCard } from './OeeSummaryCard';
 import { CardLockHeader, lockedCardStyle } from './CardLockHeader';
 import { usePageCardLocks, type CardFilterLock } from './useCardFilterLock';
@@ -32,8 +39,6 @@ interface OverviewPageProps {
   onChange: (filters: FilterState) => void;
 }
 
-type ActivePillar = 'OEE' | 'AVAILABILITY' | 'PERFORMANCE' | 'QUALITY' | null;
-
 // ── Design Tokens (Executive Editorial) ──────────────────────────────────────
 const T = {
   pageBg:     '#F8FAFC',
@@ -44,37 +49,6 @@ const T = {
   labelColor: '#475569',
   mutedColor: '#94A3B8',
 };
-
-const PILLARS = [
-  {
-    id: 'OEE' as const,
-    label: 'OEE Overview',
-    value: 67,
-    target: 80,
-    color: '#6366F1',
-  },
-  {
-    id: 'AVAILABILITY' as const,
-    label: 'Availability Index',
-    value: 85,
-    target: 85,
-    color: '#00B574',
-  },
-  {
-    id: 'PERFORMANCE' as const,
-    label: 'Performance Index',
-    value: 80,
-    target: 80,
-    color: '#FFA000',
-  },
-  {
-    id: 'QUALITY' as const,
-    label: 'Quality Index',
-    value: 99,
-    target: 99,
-    color: '#F5788B',
-  },
-] as const;
 
 const QuadrantCard = ({
   pillarId, title, kpi, kpiColor, glowClass, borderActiveClass, subtitle, children, isSummary, onClick,
@@ -264,38 +238,14 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
 
   const unplannedDowntimeTrendData = useMemo(() => globalData.unplannedDowntimeTrendData || [], [globalData]);
 
-  const stationsList = [
-    { name: 'UC01', type: 'auto', limit: 33 }, { name: 'SPFL', type: 'auto', limit: 33 },
-    { name: 'LW01', type: 'auto', limit: 33 }, { name: 'CLNC', type: 'auto', limit: 33 },
-    { name: 'LW02', type: 'auto', limit: 33 }, { name: 'LW03', type: 'auto', limit: 33 },
-    { name: 'BRZN', type: 'auto', limit: 33 }, { name: 'VMC1', type: 'auto', limit: 33 },
-    { name: 'VMC2', type: 'auto', limit: 33 }, { name: 'UC02', type: 'auto', limit: 33 },
-    { name: 'EOL', type: 'manual', limit: 45 }, { name: 'PACK', type: 'manual', limit: 45 },
-    { name: 'ALT1', type: 'manual', limit: 45 }, { name: 'LW04', type: 'manual', limit: 45 },
-    { name: 'VMC3', type: 'manual', limit: 45 }, { name: 'UC03', type: 'manual', limit: 45 },
-  ];
+  const stationsList = STATIONS_LIST;
 
   const cycleTaktStationData = useMemo(() => globalData.cycleTaktStationData || [], [globalData]);
 
   const monthlyReworkData = useMemo(() => globalData.monthlyReworkData || [], [globalData]);
 
-  const monthlyMachineDefects: Record<string, { machine: string; defects: number }[]> = {
-    Jan: [{ machine: 'MCH-029', defects: 35 }, { machine: 'MCH-052', defects: 15 }],
-    Feb: [{ machine: 'MCH-029', defects: 42 }, { machine: 'MCH-052', defects: 18 }],
-    Mar: [{ machine: 'MCH-029', defects: 38 }, { machine: 'MCH-052', defects: 12 }],
-    Apr: [{ machine: 'MCH-029', defects: 55 }, { machine: 'MCH-052', defects: 25 }],
-    May: [{ machine: 'MCH-029', defects: 48 }, { machine: 'MCH-052', defects: 30 }],
-    Jun: [{ machine: 'MCH-029', defects: 65 }, { machine: 'MCH-052', defects: 42 }, { machine: 'MCH-070', defects: 18 }],
-    Jul: [{ machine: 'MCH-029', defects: 58 }, { machine: 'MCH-052', defects: 38 }],
-    Aug: [{ machine: 'MCH-029', defects: 50 }, { machine: 'MCH-052', defects: 28 }],
-    Sep: [{ machine: 'MCH-029', defects: 78 }, { machine: 'MCH-052', defects: 44 }, { machine: 'MCH-070', defects: 22 }],
-    Oct: [{ machine: 'MCH-029', defects: 45 }, { machine: 'MCH-052', defects: 20 }],
-    Nov: [{ machine: 'MCH-029', defects: 39 }, { machine: 'MCH-052', defects: 16 }],
-    Dec: [{ machine: 'MCH-029', defects: 41 }, { machine: 'MCH-052', defects: 18 }],
-  };
-
   const selectedMonthMachinePareto = useMemo(() =>
-    selectedQualityMonth ? (monthlyMachineDefects[selectedQualityMonth] || []) : [],
+    selectedQualityMonth ? (MONTHLY_MACHINE_DEFECTS[selectedQualityMonth] || []) : [],
     [selectedQualityMonth]);
 
   const monthlyOutputPerManData = useMemo(() => globalData.monthlyOutputPerManData || [], [globalData]);
@@ -303,75 +253,7 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
   const monthlyInHouseRejectionsData = useMemo(() => globalData.monthlyInHouseRejectionsData || [], [globalData]);
 
   // Dynamic Machine-Level Composed Bar-in-Bar OEE Data
-  const machineData = useMemo(() => {
-    const stations = [
-      { name: 'UC01', section: 'premachining', baseAvail: 88, basePerf: 84, baseQual: 98 },
-      { name: 'SPFL', section: 'premachining', baseAvail: 86, basePerf: 82, baseQual: 99 },
-      { name: 'LW01', section: 'premachining', baseAvail: 89, basePerf: 85, baseQual: 98 },
-      { name: 'CLNC', section: 'premachining', baseAvail: 92, basePerf: 87, baseQual: 99 },
-      { name: 'LW02', section: 'premachining', baseAvail: 82, basePerf: 78, baseQual: 97 },
-      { name: 'LW03', section: 'premachining', baseAvail: 84, basePerf: 80, baseQual: 98 },
-      { name: 'BRZN', section: 'premachining', baseAvail: 87, basePerf: 83, baseQual: 99 },
-      
-      { name: 'VMC1', section: 'machining', baseAvail: 85, basePerf: 81, baseQual: 97 },
-      { name: 'VMC2', section: 'machining', baseAvail: 83, basePerf: 79, baseQual: 96 },
-      { name: 'UC02', section: 'machining', baseAvail: 84, basePerf: 82, baseQual: 98 },
-      
-      { name: 'EOL', section: 'postMachining', baseAvail: 94, basePerf: 90, baseQual: 99 },
-      { name: 'PACK', section: 'postMachining', baseAvail: 91, basePerf: 88, baseQual: 97 },
-      { name: 'ALT1', section: 'postMachining', baseAvail: 93, basePerf: 89, baseQual: 99 },
-      { name: 'LW04', section: 'postMachining', baseAvail: 92, basePerf: 87, baseQual: 98 },
-      { name: 'VMC3', section: 'postMachining', baseAvail: 88, basePerf: 85, baseQual: 96 },
-      { name: 'UC03', section: 'postMachining', baseAvail: 89, basePerf: 86, baseQual: 97 },
-    ];
-
-    // Filter based on opSections from filters
-    const filteredStations = stations.filter((st) => {
-      if (!filters.opSections) return true;
-      if (st.section === 'premachining' && !filters.opSections.premachining) return false;
-      if (st.section === 'machining' && !filters.opSections.machining) return false;
-      if (st.section === 'postMachining' && !filters.opSections.postMachining) return false;
-      return true;
-    });
-
-    // Add deterministic variance based on active period, shift, and plant
-    let shiftSeed = 0;
-    if (filters.shift === 'Shift A') shiftSeed = 1.2;
-    if (filters.shift === 'Shift B') shiftSeed = -0.8;
-    if (filters.shift === 'Shift C') shiftSeed = -2.1;
-
-    let plantSeed = 0;
-    if (filters.plant && filters.plant !== 'All Plants') {
-      let hash = 0;
-      for (let i = 0; i < filters.plant.length; i++) hash += filters.plant.charCodeAt(i);
-      plantSeed = (hash % 5) - 2;
-    }
-
-    let periodSeed = 0;
-    if (filters.trend === 'year') periodSeed = 1.5;
-    if (filters.trend === 'quarter') periodSeed = -0.5;
-    if (filters.trend === 'week') periodSeed = 2.2;
-
-    return filteredStations.map((st) => {
-      const idx = st.name.charCodeAt(0) + st.name.charCodeAt(1);
-      const randomOffset = Math.sin(idx) * 2;
-      
-      const availability = Math.min(100, Math.max(50, +(st.baseAvail + shiftSeed + plantSeed + periodSeed + randomOffset).toFixed(1)));
-      const performance = Math.min(100, Math.max(50, +(st.basePerf + shiftSeed * 0.8 + plantSeed * 1.2 + periodSeed * 0.5 + randomOffset * 0.7).toFixed(1)));
-      const quality = Math.min(100, Math.max(50, +(st.baseQual + shiftSeed * 0.2 + plantSeed * 0.4 + periodSeed * 0.1 + randomOffset * 0.3).toFixed(1)));
-      
-      const oee = +((availability * performance * quality) / 10000).toFixed(1);
-
-      return {
-        name: st.name,
-        uptime: availability,
-        actualVolume: performance,
-        yieldPass: quality,
-        overallOee: oee,
-        capacity: 100,
-      };
-    });
-  }, [filters.opSections, filters.shift, filters.plant, filters.trend]);
+  const machineData = useMemo(() => resolveMachineOeeData(filters), [filters.opSections, filters.shift, filters.plant, filters.trend]);
 
   const tooltipStyle = {
     background: '#1E293B', border: '1px solid #334155', borderRadius: '12px',

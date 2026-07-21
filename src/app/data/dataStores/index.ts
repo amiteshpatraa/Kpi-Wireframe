@@ -7,12 +7,43 @@ import { resolveInventoryData } from './inventoryDataStore';
 import { resolveTraceabilityData } from './traceabilityDataStore';
 
 export * from './types';
-export { resolveOeeData } from './oeeDataStore';
-export { resolveCopqData } from './copqDataStore';
-export { resolveBprData } from './bprDataStore';
-export { resolveOtifData } from './otifDataStore';
+export {
+  resolveOeeData,
+  PILLARS,
+  STATIONS_LIST,
+  MONTHLY_MACHINE_DEFECTS,
+  MACHINE_STATIONS,
+  resolveMachineOeeData
+} from './oeeDataStore';
+export {
+  resolveCopqData,
+  PILLARS as COPQ_PILLARS,
+  WARRANTY_CLAIMS
+} from './copqDataStore';
+export {
+  resolveBprData,
+  PILLARS as BPR_PILLARS,
+  VENDOR_PROMISED_DAYS,
+  resolvePromisedActualData,
+  resolveAdherenceDataWithVolume
+} from './bprDataStore';
+export {
+  resolveOtifData,
+  PILLARS as OTIF_PILLARS,
+  DELAY_BREAKDOWN
+} from './otifDataStore';
 export { resolveInventoryData } from './inventoryDataStore';
-export { resolveTraceabilityData } from './traceabilityDataStore';
+export {
+  resolveTraceabilityData,
+  SCANNER_PERFORMANCE,
+  FAILURE_CATEGORIES,
+  COMPLIANCE_LOG,
+  BREACH_LINE_STACK,
+  NODE_COLORS,
+  resolveHeatmapData,
+  resolveTimeMachineNodes,
+  type ThreadNode
+} from './traceabilityDataStore';
 
 export function getDashboardData(
   page: string,

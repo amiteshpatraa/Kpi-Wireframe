@@ -156,6 +156,7 @@ export function resolveCopqData(period: PeriodId, product: ProductId, process: s
     preventionAppraisalData,
     supplierQualityMatrix,
     summaryTrendData,
+    warrantyClaimsTable: WARRANTY_CLAIMS,
     targetValue,
     icon: 'TrendingDown',
     gradient: ['#7C3AED', '#6D28D9'],
@@ -184,3 +185,44 @@ export function resolveCopqData(period: PeriodId, product: ProductId, process: s
 
   return result;
 }
+
+export const PILLARS = [
+  {
+    id: 'INTERNAL' as const,
+    label: 'Internal Failures',
+    value: '$1.42M',
+    target: '$1.20M',
+    color: '#7C3AED',
+  },
+  {
+    id: 'EXTERNAL' as const,
+    label: 'External Failures',
+    value: '$485K',
+    target: '$350K',
+    color: '#EF4444',
+  },
+  {
+    id: 'PREVENTION' as const,
+    label: 'Prevention & Appraisal',
+    value: '$220K',
+    target: '$250K',
+    color: '#10B981',
+  },
+  {
+    id: 'QUALITY' as const,
+    label: 'First Pass Yield (FPY)',
+    value: '94.2%',
+    target: '98.5%',
+    color: '#3B82F6',
+  },
+] as const;
+
+export type ActiveCopqPillar = typeof PILLARS[number]['id'] | null;
+
+export const WARRANTY_CLAIMS = [
+  { claimId: 'CLM-9021', sku: '2002254-00-E06', customer: 'Tesla Fremont', cost: '$18,400', defect: 'Laser Weld Porosity', status: 'Approved' },
+  { claimId: 'CLM-9022', sku: '2002254-00-E08', customer: 'Rivian Normal', cost: '$11,200', defect: 'Sticker Alignment Missing', status: 'Under Review' },
+  { claimId: 'CLM-9023', sku: '2002254-00-E10', customer: 'Lucid Casa Grande', cost: '$7,600', defect: 'O-ring Micro-Crack', status: 'Approved' },
+  { claimId: 'CLM-9024', sku: '2002254-00-E12', customer: 'GM Factory ZERO', cost: '$3,100', defect: 'Surface Scratch', status: 'Rejected' },
+];
+

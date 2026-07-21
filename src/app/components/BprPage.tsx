@@ -37,7 +37,7 @@ import {
 import { CardLockHeader, lockedCardStyle } from './CardLockHeader';
 import { usePageCardLocks } from './useCardFilterLock';
 import { cn } from './ui/utils';
-import { getDashboardData } from '../data/dashboardDataStore';
+import { getDashboardData, resolvePromisedActualData, resolveAdherenceDataWithVolume } from '../data/dataStores';
 
 interface BprPageProps {
   filters: FilterState;
@@ -74,9 +74,9 @@ const T = {
 };
 
 // Concentric radial ring dimensions
-const R_bpr_1 = 32;
-const R_bpr_2 = 24;
-const R_bpr_3 = 16;
+const R_bpr_1 = 54;
+const R_bpr_2 = 46;
+const R_bpr_3 = 38;
 const C_bpr_1 = 2 * Math.PI * R_bpr_1;
 const C_bpr_2 = 2 * Math.PI * R_bpr_2;
 const C_bpr_3 = 2 * Math.PI * R_bpr_3;
@@ -142,59 +142,19 @@ export function BprPage({ filters, onChange }: BprPageProps) {
   }, [activePillar, q1Lock.effectiveFilters, q2Lock.effectiveFilters, q3Lock.effectiveFilters, q4Lock.effectiveFilters, filters]);
 
   const q2PromisedActualData = useMemo(() => {
-    const basePromised: Record<string, number> = {
-      'Krupp Steel Forge': 6,
-      'Acme Castings': 8,
-      'SealTech Components': 5,
-    };
-    return q2Data.vendorDelayData.map((d: any) => {
-      const promised = basePromised[d.vendor] || 5;
-      const actual = +(promised + d.delayDays).toFixed(1);
-      return {
-        supplier: d.vendor,
-        promised,
-        actual,
-      };
-    });
+    return resolvePromisedActualData(q2Data.vendorDelayData).map(d => ({ supplier: d.vendor, promised: d.promised, actual: d.actual }));
   }, [q2Data.vendorDelayData]);
 
   const activePromisedActualData = useMemo(() => {
-    const basePromised: Record<string, number> = {
-      'Krupp Steel Forge': 6,
-      'Acme Castings': 8,
-      'SealTech Components': 5,
-    };
-    return activeData.vendorDelayData.map((d: any) => {
-      const promised = basePromised[d.vendor] || 5;
-      const actual = +(promised + d.delayDays).toFixed(1);
-      return {
-        supplier: d.vendor,
-        promised,
-        actual,
-      };
-    });
+    return resolvePromisedActualData(activeData.vendorDelayData).map(d => ({ supplier: d.vendor, promised: d.promised, actual: d.actual }));
   }, [activeData.vendorDelayData]);
 
   const q3AdherenceDataWithVolume = useMemo(() => {
-    return q3Data.scheduleAdherenceData.map((d: any, i: number) => {
-      const baseOrders = 200 + (Math.sin(i) * 100) + (Math.cos(i * 2) * 50);
-      const ordersDispatched = Math.round(baseOrders);
-      return {
-        ...d,
-        ordersDispatched,
-      };
-    });
+    return resolveAdherenceDataWithVolume(q3Data.scheduleAdherenceData);
   }, [q3Data.scheduleAdherenceData]);
 
   const activeAdherenceDataWithVolume = useMemo(() => {
-    return activeData.scheduleAdherenceData.map((d: any, i: number) => {
-      const baseOrders = 200 + (Math.sin(i) * 100) + (Math.cos(i * 2) * 50);
-      const ordersDispatched = Math.round(baseOrders);
-      return {
-        ...d,
-        ordersDispatched,
-      };
-    });
+    return resolveAdherenceDataWithVolume(activeData.scheduleAdherenceData);
   }, [activeData.scheduleAdherenceData]);
 
   const filteredReplenishmentLedger = useMemo(() => {
@@ -905,41 +865,41 @@ export function BprPage({ filters, onChange }: BprPageProps) {
               />
 
               {/* Rings & Info Side-by-Side */}
-              <div className="flex items-center justify-around py-4">
+              <div className="flex items-center justify-between gap-6 py-4 px-2">
                 {/* Concentric rings */}
-                <div className="relative w-[110px] h-[110px] shrink-0">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="55" cy="55" r={R_bpr_1} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_bpr_2} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_bpr_3} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_bpr_1} fill="transparent" stroke={q1Data.isWarning ? T.red : T.amber} strokeWidth="5" strokeDasharray={C_bpr_1} strokeDashoffset={q1Data.dashoffsetAvail} strokeLinecap="round" />
-                    <circle cx="55" cy="55" r={R_bpr_2} fill="transparent" stroke={T.green} strokeWidth="5" strokeDasharray={C_bpr_2} strokeDashoffset={q1Data.dashoffsetPerf} strokeLinecap="round" />
-                    <circle cx="55" cy="55" r={R_bpr_3} fill="transparent" stroke={T.blue} strokeWidth="5" strokeDasharray={C_bpr_3} strokeDashoffset={q1Data.dashoffsetQual} strokeLinecap="round" />
+                <div className="relative w-28 h-28 sm:w-34 sm:h-34 shrink-0 flex items-center justify-center">
+                  <svg viewBox="0 0 120 120" className="w-full h-full transform -rotate-90">
+                    <circle cx="60" cy="60" r={R_bpr_1} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_bpr_2} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_bpr_3} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_bpr_1} fill="transparent" stroke={q1Data.isWarning ? T.red : T.amber} strokeWidth="4" strokeDasharray={C_bpr_1} strokeDashoffset={C_bpr_1 * (1 - Math.min(100, q1Data.penetrationIndex) / 100)} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+                    <circle cx="60" cy="60" r={R_bpr_2} fill="transparent" stroke={T.green} strokeWidth="4" strokeDasharray={C_bpr_2} strokeDashoffset={C_bpr_2 * (1 - Math.min(100, q1Data.supplierAdherence) / 100)} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+                    <circle cx="60" cy="60" r={R_bpr_3} fill="transparent" stroke={T.blue} strokeWidth="4" strokeDasharray={C_bpr_3} strokeDashoffset={C_bpr_3 * (1 - Math.min(100, q1Data.demandAdherence) / 100)} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
                   </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                    <span className="text-sm font-black text-slate-800" style={{ color: q1Data.isWarning ? T.red : 'inherit' }}>{q1Data.penetrationIndex.toFixed(1)}%</span>
-                    <span className="text-[6px] text-slate-400 font-bold uppercase tracking-wider">Index</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                    <span className="text-sm sm:text-base font-black text-slate-800 tracking-tight leading-none" style={{ color: q1Data.isWarning ? T.red : 'inherit' }}>{q1Data.penetrationIndex.toFixed(1)}%</span>
+                    <span className="text-[7.5px] text-slate-400 font-extrabold uppercase tracking-widest mt-1">Index</span>
                   </div>
                 </div>
 
                 {/* Vertical detail ledger */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: q1Data.isWarning ? T.red : T.amber }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: q1Data.isWarning ? T.red : T.amber }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">Avg Buffer Penetration</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{q1Data.penetrationIndex.toFixed(1)}% <span className="text-[8px] text-slate-400 font-normal">/ 95% target</span></p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: T.green }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: T.green }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">Supplier Adherence</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{q1Data.supplierAdherence.toFixed(1)}% <span className="text-[8px] text-slate-400 font-normal">/ 95% target</span></p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: T.blue }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: T.blue }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">Demand Adherence</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{q1Data.demandAdherence.toFixed(1)}% <span className="text-[8px] text-slate-400 font-normal">/ 98% target</span></p>

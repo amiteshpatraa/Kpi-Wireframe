@@ -21,7 +21,7 @@ import {
   Pie,
 } from 'recharts';
 import { type FilterState } from './TimeTrendFilter';
-import { getDashboardData } from '../data/dashboardDataStore';
+import { getDashboardData } from '../data/dataStores';
 import {
   ArrowLeft,
   Truck,
@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { CardLockHeader, lockedCardStyle } from './CardLockHeader';
 import { usePageCardLocks } from './useCardFilterLock';
+import { PILLARS, DELAY_BREAKDOWN, type ActiveOtifPillar } from '../data/dataStores/otifDataStore';
 
 interface OtifPageProps {
   filters: FilterState;
@@ -116,62 +117,59 @@ function GradDefs() {
 }
 
 // Concentric Radial Progress Ring Component for Quadrant 1
-function ConcentricRadialRing() {
-  const r1 = 43; // Enlarged concentric radial rings
+function ConcentricRadialRing({ otifValue }: { otifValue: number }) {
+  const r1 = 54;
   const c1 = 2 * Math.PI * r1;
-  const offset1 = c1 * (1 - 0.942);
+  const offset1 = c1 * (1 - Math.min(100, otifValue) / 100);
 
-  const r2 = 33;
+  const r2 = 46;
   const c2 = 2 * Math.PI * r2;
   const offset2 = c2 * (1 - 0.964);
 
-  const r3 = 23;
+  const r3 = 38;
   const c3 = 2 * Math.PI * r3;
   const offset3 = c3 * (1 - 0.918);
 
   return (
-    <div className="relative flex items-center justify-center w-[170px] h-[170px] shrink-0 select-none">
-      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+    <div className="relative flex items-center justify-center w-36 h-36 sm:w-40 sm:h-40 shrink-0 select-none">
+      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
         {/* Background track circles */}
-        <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="6" />
-        <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="6" />
-        <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="6" />
+        <circle cx="60" cy="60" r={r1} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="4" />
+        <circle cx="60" cy="60" r={r2} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="4" />
+        <circle cx="60" cy="60" r={r3} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="4" />
 
         {/* Progress circles */}
-        {/* Ring 1 (Outer): Overall OTIF - Coral */}
         <circle
-          cx="50"
-          cy="50"
+          cx="60"
+          cy="60"
           r={r1}
           fill="transparent"
           stroke="#EC6530"
-          strokeWidth="6"
+          strokeWidth="4"
           strokeDasharray={c1}
           strokeDashoffset={offset1}
           strokeLinecap="round"
           style={{ transition: 'stroke-dashoffset 0.5s ease' }}
         />
-        {/* Ring 2 (Middle): In-Full Adherence - Apricot */}
         <circle
-          cx="50"
-          cy="50"
+          cx="60"
+          cy="60"
           r={r2}
           fill="transparent"
           stroke="#FFAE6E"
-          strokeWidth="6"
+          strokeWidth="4"
           strokeDasharray={c2}
           strokeDashoffset={offset2}
           strokeLinecap="round"
           style={{ transition: 'stroke-dashoffset 0.5s ease' }}
         />
-        {/* Ring 3 (Inner): On-Time Adherence - Mint */}
         <circle
-          cx="50"
-          cy="50"
+          cx="60"
+          cy="60"
           r={r3}
           fill="transparent"
           stroke="#8FDDDF"
-          strokeWidth="6"
+          strokeWidth="4"
           strokeDasharray={c3}
           strokeDashoffset={offset3}
           strokeLinecap="round"
@@ -179,9 +177,9 @@ function ConcentricRadialRing() {
         />
       </svg>
       {/* Center Label */}
-      <div className="absolute flex flex-col items-center justify-center">
-        <span style={{ color: T.numColor, fontSize: '20px', fontWeight: 800 }}>94.2%</span>
-        <span style={{ color: T.mutedColor, fontSize: '8px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>OTIF INDEX</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+        <span style={{ color: T.numColor, fontSize: '15px', fontWeight: 800, lineHeight: 1 }}>{otifValue}%</span>
+        <span style={{ color: T.mutedColor, fontSize: '7.5px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', marginTop: '3px' }}>OTIF INDEX</span>
       </div>
     </div>
   );
@@ -250,64 +248,12 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
 
   const seed = useMemo(() => filters.shift.length + filters.line.length + (filters.trend.length * 10), [filters]);
 
-  const otifSummaryData = useMemo(() => timeLabels.map((name, i) => {
-    const scheduled = 1000 + (seed * 10) + Math.round(Math.sin(i + seed) * 200);
-    const delivered = scheduled - Math.round(Math.abs(Math.cos(i) * 100));
-    const pct = Number(((delivered / scheduled) * 100).toFixed(1));
-    return { name, scheduled, delivered, pct };
-  }), [timeLabels, seed]);
-
-  const dispatchAdherenceData = useMemo(() => timeLabels.map((name, i) => {
-    const onTime = 300 + (seed * 2) + Math.round(Math.sin(i) * 50);
-    const delayed = 10 + Math.round(Math.cos(i + seed) * 20);
-    return { name, onTime, delayed };
-  }), [timeLabels, seed]);
-
-  const productionPlanActualData = useMemo(() => timeLabels.map((name, i) => {
-    const plan = 1200 + (seed * 5) + Math.round(Math.cos(i) * 80);
-    const actual = plan - 50 + Math.round(Math.sin(i * 1.2 + seed) * 150);
-    const variance = Number((((actual - plan) / plan) * 100).toFixed(1));
-    const adherence = Math.min(100, Math.max(60, Math.round(95 + (actual - plan) / plan * 8)));
-    return { name, plan, actual, variance, adherence };
-  }), [timeLabels, seed]);
-
-  const materialReadinessData = useMemo(() => timeLabels.map((name, i) => {
-    const raw = 320 + (seed * 2) + Math.round(Math.sin(i + seed) * 40);
-    const wip = 210 + seed + Math.round(Math.cos(i * 1.3 + seed) * 30);
-    return { name, raw, wip };
-  }), [timeLabels, seed]);
-
-  const delayBreakdownData = useMemo(() => {
-    return [
-      { name: 'Order Entry', value: 15 + (seed % 5), color: '#FFAE6E' },
-      { name: 'Production', value: 35 - (seed % 3), color: '#EC6530' },
-      { name: 'Packaging', value: 20 + (seed % 4), color: '#8FDDDF' },
-      { name: 'Transit', value: 30 - (seed % 2), color: '#FFE3E3' },
-    ];
-  }, [seed]);
-
-  const weeklyProdDetails = useMemo(() => {
-    return timeLabels.map((name, i) => {
-      const seedVal = seed + i;
-      const pMachined = 100 + Math.round(Math.sin(seedVal) * 20);
-      const pAssembled = 120 + Math.round(Math.cos(seedVal) * 20);
-      const pFabricated = 80 + Math.round(Math.sin(seedVal * 1.5) * 15);
-      
-      const aMachined = pMachined - 10 + Math.round(Math.cos(seedVal) * 15);
-      const aAssembled = pAssembled + (seedVal % 2 === 0 ? 10 : -15);
-      const aFabricated = pFabricated - 5 + Math.round(Math.sin(seedVal * 1.2) * 10);
-      
-      const eff1 = Math.min(100, Math.max(70, 85 + Math.round(Math.sin(seedVal) * 10)));
-      const eff2 = Math.min(100, Math.max(70, 88 + Math.round(Math.cos(seedVal * 1.3) * 8)));
-      
-      return {
-        name,
-        pMachined, pAssembled, pFabricated,
-        aMachined, aAssembled, aFabricated,
-        eff1, eff2
-      };
-    });
-  }, [timeLabels, seed]);
+  const otifSummaryData = q1Otif.otifSummaryData || [];
+  const dispatchAdherenceData = q1Otif.dispatchAdherenceData || [];
+  const productionPlanActualData = q1Otif.productionPlanActualData || [];
+  const materialReadinessData = q1Otif.materialReadinessData || [];
+  const delayBreakdownData = q1Otif.delayBreakdownData || DELAY_BREAKDOWN;
+  const weeklyProdDetails = q1Otif.weeklyProdDetails || [];
 
   const chart1Data = useMemo(() => {
     if (filters.trend === 'year' || filters.trend === 'quarter') {
@@ -527,7 +473,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
             />
 
             <div className="flex items-center gap-6 my-auto">
-              <ConcentricRadialRing />
+              <ConcentricRadialRing otifValue={q1Otif.otifVal} />
               <div className="flex-grow flex flex-col gap-2.5">
                 {[
                   { label: 'Scheduled', value: '100%', target: '100%', color: '#FFE3E3' },

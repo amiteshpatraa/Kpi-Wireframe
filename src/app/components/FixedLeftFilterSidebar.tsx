@@ -18,8 +18,8 @@ const plantOptions = [
 ];
 
 const processOptions = [
-  'VMC1', 'PACK', 'UC1', 'SF01', 'LW1', 'CL1', 'LW2', 'LW3', 'BRZ', 'SB10', 
-  'RSHP', 'ALT10', 'OP10', 'OP20', 'SLGL', 'OP30', 'OP40', 'OP50', 'UC2', 'EOL'
+   'UC1', 'SF01', 'LW1', 'CL1', 'LW2', 'LW3', 'BRZ', 'SHBL', 
+  'RSHP', 'ALT',  'VMC1', 'SLGL', 'VMC2', 'UC2', 'EOL','PACK',
 ];
 
 const subOptionsMap = {
@@ -61,7 +61,7 @@ export function FixedLeftFilterSidebar({ filters, onChange }: SidebarProps) {
   // Single select values for the conditional dropdowns
   const [selectedProduct, setSelectedProduct] = useState(filters.product !== 'All Products' && filters.product ? filters.product : 'Matrix');
   const [selectedPlant, setSelectedPlant] = useState(filters.plant !== 'All Plants' && filters.plant ? filters.plant : 'Tata Toyo Radiator Ltd. (Chakan)');
-  const [selectedProcess, setSelectedProcess] = useState(filters.process !== 'All Processes' && filters.process ? filters.process : 'UC1');
+  const [selectedProcess, setSelectedProcess] = useState(filters.process !== 'All Processes' && filters.process ? filters.process : 'SLGL');
 
   const toggleFilter = (key: keyof typeof localCheckboxes) => {
     const updated = !localCheckboxes[key];
@@ -336,7 +336,7 @@ export function FixedLeftFilterSidebar({ filters, onChange }: SidebarProps) {
                 const labels: Record<keyof typeof opSections, string> = {
                   premachining: 'Premachining',
                   machining: 'Machining',
-                  postMachining: 'Assembly',
+                  postMachining: 'Post Machining',
                 };
                 const checked = opSections[key];
                 return (

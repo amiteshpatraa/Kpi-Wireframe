@@ -20,7 +20,7 @@ import {
   Legend,
 } from 'recharts';
 import { type FilterState } from './TimeTrendFilter';
-import { getDashboardData } from '../data/dashboardDataStore';
+import { getDashboardData } from '../data/dataStores';
 import {
   ArrowLeft,
   Package,
@@ -467,9 +467,9 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
     : activePillar === 'VELOCITY'  ? 'Line Velocity Bottlenecks'
     : 'Summary Dashboard';
 
-  const R_avail = 32;
-  const R_perf = 24;
-  const R_qual = 16;
+  const R_avail = 54;
+  const R_perf = 46;
+  const R_qual = 38;
   const C_avail = 2 * Math.PI * R_avail;
   const C_perf = 2 * Math.PI * R_perf;
   const C_qual = 2 * Math.PI * R_qual;
@@ -762,7 +762,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
       { key: 'rawMaterial',    label: 'Raw Material',  stroke: '#BDE8F5', gradFrom: '#BDE8F5', gradTo: '#E8F9FE', gradId: 'jrRaw',  threshold: 180 },
       { key: 'preMachining',   label: 'Pre-Mach.',     stroke: '#4988C4', gradFrom: '#4988C4', gradTo: '#BDE8F5', gradId: 'jrPre',  threshold: 330 },
       { key: 'machining',      label: 'Machining',     stroke: '#1C4D8D', gradFrom: '#1C4D8D', gradTo: '#4988C4', gradId: 'jrMach', threshold: 420 },
-      { key: 'assembly',       label: 'Assembly',      stroke: '#7C3AED', gradFrom: '#7C3AED', gradTo: '#A78BFA', gradId: 'jrAssy', threshold: 260 },
+      { key: 'assembly',       label: 'Post Machining', stroke: '#7C3AED', gradFrom: '#7C3AED', gradTo: '#A78BFA', gradId: 'jrAssy', threshold: 260 },
       { key: 'qualInspection', label: 'QC Insp.',      stroke: '#FFB090', gradFrom: '#FFB090', gradTo: '#FFF1D3', gradId: 'jrQual', threshold: 140 },
     ] as const;
 
@@ -945,7 +945,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
               { label: 'Raw Mat.', color: '#BDE8F5' },
               { label: 'Pre-Mach.', color: '#4988C4' },
               { label: 'Machining', color: '#1C4D8D' },
-              { label: 'Assembly', color: '#7C3AED' },
+              { label: 'Post Machining', color: '#7C3AED' },
               { label: 'QC Insp.', color: '#FFB090' },
             ] as const).map(s => (
               <span key={s.label} className="flex items-center gap-1 text-[7px] font-black text-slate-500 uppercase">
@@ -1277,41 +1277,41 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
               />
 
               {/* Rings & Info Side-by-Side */}
-              <div className="flex items-center justify-around py-4">
+              <div className="flex items-center justify-between gap-6 py-4 px-2">
                 {/* Concentric rings */}
-                <div className="relative w-[110px] h-[110px] shrink-0">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="55" cy="55" r={R_avail} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_perf} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_qual} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_avail} fill="transparent" stroke={GOLD} strokeWidth="5" strokeDasharray={C_avail} strokeDashoffset={dashoffsetAvail} strokeLinecap="round" />
-                    <circle cx="55" cy="55" r={R_perf} fill="transparent" stroke={TEAL} strokeWidth="5" strokeDasharray={C_perf} strokeDashoffset={dashoffsetPerf} strokeLinecap="round" />
-                    <circle cx="55" cy="55" r={R_qual} fill="transparent" stroke={ICE} strokeWidth="5" strokeDasharray={C_qual} strokeDashoffset={dashoffsetQual} strokeLinecap="round" />
+                <div className="relative w-28 h-28 sm:w-34 sm:h-34 shrink-0 flex items-center justify-center">
+                  <svg viewBox="0 0 120 120" className="w-full h-full transform -rotate-90">
+                    <circle cx="60" cy="60" r={R_avail} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_perf} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_qual} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_avail} fill="transparent" stroke={GOLD} strokeWidth="4" strokeDasharray={C_avail} strokeDashoffset={dashoffsetAvail} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+                    <circle cx="60" cy="60" r={R_perf} fill="transparent" stroke={TEAL} strokeWidth="4" strokeDasharray={C_perf} strokeDashoffset={dashoffsetPerf} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+                    <circle cx="60" cy="60" r={R_qual} fill="transparent" stroke={ICE} strokeWidth="4" strokeDasharray={C_qual} strokeDashoffset={dashoffsetQual} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
                   </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                    <span className="text-sm font-black text-slate-800">{invProfile.stockTurns}x</span>
-                    <span className="text-[6px] text-slate-400 font-bold uppercase tracking-wider">Turns</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                    <span className="text-sm sm:text-base font-black text-slate-800 tracking-tight leading-none">{invProfile.stockTurns}x</span>
+                    <span className="text-[7.5px] text-slate-400 font-extrabold uppercase tracking-widest mt-1">Turns</span>
                   </div>
                 </div>
 
                 {/* Vertical detail ledger */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: GOLD }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: GOLD }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">FG Stock Turns</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{invProfile.stockTurns}x <span className="text-[8px] text-slate-400 font-normal">/ 8x target</span></p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TEAL }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: TEAL }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">Days of Cover</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{invProfile.daysOfCover} Days <span className="text-[8px] text-slate-400 font-normal">/ 10d target</span></p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ICE }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ICE }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">Active WIP</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{invProfile.wipOnFloor.toLocaleString()} <span className="text-[8px] text-slate-400 font-normal">/ 2k target</span></p>

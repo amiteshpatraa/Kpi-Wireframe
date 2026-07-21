@@ -346,9 +346,9 @@ export function useDefaultFilters(): FilterState {
     subPeriod: 'mtd',
     shift: 'All Shifts',
     line: 'All Lines',
-    product: 'All Products',
+    product: 'Matrix',
     plant: 'Tata Toyo Radiator (Chakan)',
-    process: 'All Processes',
+    process: 'SLGL',
     machine: 'All Machines',
     selectedDate: new Date(),
     opSections: {

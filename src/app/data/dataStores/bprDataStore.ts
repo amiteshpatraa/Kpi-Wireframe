@@ -51,7 +51,7 @@ export function resolveBprData(period: PeriodId, product: ProductId, process: st
     demandAdherence = 92.4;
     targetCoverage = 4.0;
     isWarning = true;
-    label = `Assembly (${process})`;
+    label = `Post Machining (${process})`;
   }
 
   const scale = penetrationIndex / 88.0;
@@ -240,3 +240,69 @@ export function resolveBprData(period: PeriodId, product: ProductId, process: st
     glowShadow: 'rgba(14,165,233,0.2)'
   };
 }
+
+export const PILLARS = [
+  {
+    id: 'PENETRATION' as const,
+    label: 'Buffer Penetration Index',
+    value: 88,
+    target: 95,
+    color: '#0EA5E9',
+  },
+  {
+    id: 'LEADTIME' as const,
+    label: 'Replenishment Lead Time',
+    value: 4.2,
+    target: 3.5,
+    color: '#F59E0B',
+  },
+  {
+    id: 'ADHERENCE' as const,
+    label: 'Schedule Adherence',
+    value: 92,
+    target: 98,
+    color: '#10B981',
+  },
+  {
+    id: 'STOCKOUT' as const,
+    label: 'Stockout Risk Index',
+    value: 98,
+    target: 99,
+    color: '#EF4444',
+  },
+] as const;
+
+export type ActiveBprPillar = typeof PILLARS[number]['id'] | null;
+
+export const VENDOR_PROMISED_DAYS: Record<string, number> = {
+  'Krupp Steel Forge': 5,
+  'Acme Castings': 4,
+  'SealTech Components': 3,
+  'SteelCorp India': 6
+};
+
+export function resolvePromisedActualData(vendorDelayData: any[]) {
+  return (vendorDelayData || []).map((d: any) => {
+    const promised = VENDOR_PROMISED_DAYS[d.vendor] || 5;
+    const actual = +(promised + d.delayDays).toFixed(1);
+    return {
+      vendor: d.vendor,
+      promised,
+      actual,
+      delayDays: d.delayDays,
+      color: d.color
+    };
+  });
+}
+
+export function resolveAdherenceDataWithVolume(scheduleAdherenceData: any[]) {
+  return (scheduleAdherenceData || []).map((d: any, i: number) => {
+    const baseOrders = 200 + (Math.sin(i) * 100) + (Math.cos(i * 2) * 50);
+    const ordersDispatched = Math.round(baseOrders);
+    return {
+      ...d,
+      ordersDispatched
+    };
+  });
+}
+

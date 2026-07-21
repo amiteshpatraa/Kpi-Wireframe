@@ -13,7 +13,7 @@ import {
   ReferenceLine,
   Legend,
 } from 'recharts';
-import { getDashboardData } from '../data/dashboardDataStore';
+import { getDashboardData } from '../data/dataStores';
 import { type FilterState } from './TimeTrendFilter';
 import {
   ArrowLeft,
@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { CardLockHeader, lockedCardStyle } from './CardLockHeader';
 import { usePageCardLocks } from './useCardFilterLock';
+import { PILLARS, WARRANTY_CLAIMS, type ActiveCopqPillar } from '../data/dataStores/copqDataStore';
 
 interface CopqPageProps {
   filters: FilterState;
@@ -69,10 +70,10 @@ function IconPill({ icon: Icon, color, bg }: { icon: React.ElementType; color: s
 }
 
 function ConcentricRadialRing({ fpyValue, ytdLoss, size = 150 }: { fpyValue: number; ytdLoss: number; size?: number }) {
-  const scaleFactor = size / 150;
-  const r1 = 40; const c1 = 2 * Math.PI * r1; const offset1 = c1 * (1 - fpyValue / 100);
-  const r2 = 30; const c2 = 2 * Math.PI * r2; const offset2 = c2 * (1 - 0.985);
-  const r3 = 20; const c3 = 2 * Math.PI * r3; const offset3 = c3 * (1 - 0.90);
+  const scaleFactor = Math.max(0.75, size / 150);
+  const r1 = 54; const c1 = 2 * Math.PI * r1; const offset1 = c1 * (1 - Math.min(100, fpyValue) / 100);
+  const r2 = 46; const c2 = 2 * Math.PI * r2; const offset2 = c2 * (1 - 0.985);
+  const r3 = 38; const c3 = 2 * Math.PI * r3; const offset3 = c3 * (1 - 0.90);
   
   const formatLossInline = (v: number) => {
     if (v === 0) return '₹0';
@@ -83,18 +84,18 @@ function ConcentricRadialRing({ fpyValue, ytdLoss, size = 150 }: { fpyValue: num
   const lossLabel = formatLossInline(ytdLoss);
   return (
     <div className="relative flex items-center justify-center shrink-0 select-none" style={{ width: `${size}px`, height: `${size}px` }}>
-      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#F1F5F9" strokeWidth="5.5" />
-        <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#F1F5F9" strokeWidth="5.5" />
-        <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#F1F5F9" strokeWidth="5.5" />
-        <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#EF4444" strokeWidth="5.5" strokeDasharray={c1} strokeDashoffset={offset1} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
-        <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#10B981" strokeWidth="5.5" strokeDasharray={c2} strokeDashoffset={offset2} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
-        <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#F59E0B" strokeWidth="5.5" strokeDasharray={c3} strokeDashoffset={offset3} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r={r1} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+        <circle cx="60" cy="60" r={r2} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+        <circle cx="60" cy="60" r={r3} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+        <circle cx="60" cy="60" r={r1} fill="transparent" stroke="#EF4444" strokeWidth="4" strokeDasharray={c1} strokeDashoffset={offset1} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+        <circle cx="60" cy="60" r={r2} fill="transparent" stroke="#10B981" strokeWidth="4" strokeDasharray={c2} strokeDashoffset={offset2} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+        <circle cx="60" cy="60" r={r3} fill="transparent" stroke="#F59E0B" strokeWidth="4" strokeDasharray={c3} strokeDashoffset={offset3} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
       </svg>
-      <div className="absolute flex flex-col items-center justify-center">
-        <span style={{ color: '#0F172A', fontSize: `${16 * scaleFactor}px`, fontWeight: 800 }}>{lossLabel}</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+        <span style={{ color: '#0F172A', fontSize: `${14 * scaleFactor}px`, fontWeight: 800, lineHeight: 1 }}>{lossLabel}</span>
         {size > 80 && (
-          <span style={{ color: '#94A3B8', fontSize: `${7.5 * scaleFactor}px`, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>COPQ LOSS</span>
+          <span style={{ color: '#94A3B8', fontSize: `${7 * scaleFactor}px`, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', marginTop: '3px' }}>COPQ LOSS</span>
         )}
       </div>
     </div>
@@ -251,11 +252,7 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
   };
 
   // ── CONSTANTS FOR TABLES ──────────────────────────────────────────────────
-  const warrantyClaimsTable = [
-    { id: 'REC-091', batch: 'BAT-2891 (Valves)',  cost: 320000, action: 'Recall & Replace' },
-    { id: 'REC-052', batch: 'BAT-1102 (Seals)',   cost: 210000, action: 'Containment sort' },
-    { id: 'REC-070', batch: 'BAT-3490 (Casting)', cost: 90000, action: 'Component quarantine' },
-  ];
+  const warrantyClaimsTable = WARRANTY_CLAIMS;
 
   // Resolve profiles for active locks
   const q1Profile = getCopqProfile(q1Lock.effectiveFilters);

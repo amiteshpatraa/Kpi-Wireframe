@@ -68,11 +68,11 @@ export function OeeSummaryCard({
   const perfTarget = 80;
   const qualTarget = 85;
 
-  // Ring geometries
-  const R_oee = 44;
-  const R_avail = 36;
-  const R_perf = 28;
-  const R_qual = 20;
+  // Ring geometries (120x120 viewBox centered at 60,60)
+  const R_oee = 54;
+  const R_avail = 46;
+  const R_perf = 38;
+  const R_qual = 30;
 
   const C_oee = 2 * Math.PI * R_oee;
   const C_avail = 2 * Math.PI * R_avail;
@@ -267,8 +267,8 @@ export function OeeSummaryCard({
       {/* Main Content Area */}
       <div className={`flex-grow flex items-center ${isVariantB ? 'gap-10 py-3' : 'justify-around py-3'}`}>
         {/* Concentric rings */}
-        <div className={`relative ${isVariantB ? 'w-32 h-32 flex-shrink-0' : 'w-[110px] h-[110px] shrink-0'}`}>
-          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+        <div className={`relative ${isVariantB ? 'w-32 h-32 sm:w-36 sm:h-36 flex-shrink-0' : 'w-28 h-28 sm:w-34 sm:h-34 shrink-0'} flex items-center justify-center`}>
+          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
             <defs>
               <linearGradient id="oeeAvailGrad" x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0%" stopColor={activeTheme.availabilityStart} />
@@ -289,16 +289,16 @@ export function OeeSummaryCard({
             </defs>
 
             {/* Background Tracks */}
-            {isVariantB && <circle cx="50" cy="50" r={R_oee} fill="transparent" stroke={activeTheme.oeeEnd} strokeWidth="5.5" />}
-            <circle cx="50" cy="50" r={R_avail} fill="transparent" stroke={isVariantB ? activeTheme.oeeEnd : "#F1F5F9"} strokeWidth="5.5" />
-            <circle cx="50" cy="50" r={R_perf} fill="transparent" stroke={isVariantB ? activeTheme.oeeEnd : "#F1F5F9"} strokeWidth="5.5" />
-            <circle cx="50" cy="50" r={R_qual} fill="transparent" stroke={isVariantB ? activeTheme.oeeEnd : "#F1F5F9"} strokeWidth="5.5" />
+            {isVariantB && <circle cx="60" cy="60" r={R_oee} fill="transparent" stroke={activeTheme.oeeEnd} strokeWidth="4" />}
+            <circle cx="60" cy="60" r={R_avail} fill="transparent" stroke={isVariantB ? activeTheme.oeeEnd : "#F1F5F9"} strokeWidth="4" />
+            <circle cx="60" cy="60" r={R_perf} fill="transparent" stroke={isVariantB ? activeTheme.oeeEnd : "#F1F5F9"} strokeWidth="4" />
+            <circle cx="60" cy="60" r={R_qual} fill="transparent" stroke={isVariantB ? activeTheme.oeeEnd : "#F1F5F9"} strokeWidth="4" />
 
             {/* Overall OEE (Outer Ring) */}
             {isVariantB && (
               <circle
-                cx="50"
-                cy="50"
+                cx="60"
+                cy="60"
                 r={R_oee}
                 fill="transparent"
                 strokeDasharray={C_oee}
@@ -310,8 +310,8 @@ export function OeeSummaryCard({
 
             {/* Availability */}
             <circle
-              cx="50"
-              cy="50"
+              cx="60"
+              cy="60"
               r={R_avail}
               fill="transparent"
               strokeDasharray={C_avail}
@@ -322,8 +322,8 @@ export function OeeSummaryCard({
 
             {/* Performance */}
             <circle
-              cx="50"
-              cy="50"
+              cx="60"
+              cy="60"
               r={R_perf}
               fill="transparent"
               strokeDasharray={C_perf}
@@ -334,8 +334,8 @@ export function OeeSummaryCard({
 
             {/* Quality */}
             <circle
-              cx="50"
-              cy="50"
+              cx="60"
+              cy="60"
               r={R_qual}
               fill="transparent"
               strokeDasharray={C_qual}
@@ -344,11 +344,11 @@ export function OeeSummaryCard({
               style={getRingStyle('quality', '#F5788B', 'oeeQualGrad', activeTheme.qualityStart)}
             />
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-lg font-black leading-none" style={{ color: isVariantB ? activeTheme.oeeStart : '#0F172A' }}>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+            <span className="text-sm sm:text-base font-black leading-none" style={{ color: isVariantB ? activeTheme.oeeStart : '#0F172A' }}>
               {oeeValue}%
             </span>
-            <span className="text-[6px] text-slate-400 font-extrabold uppercase tracking-wider mt-0.5">OEE</span>
+            <span className="text-[7.5px] text-slate-400 font-extrabold uppercase tracking-widest mt-1">OEE</span>
           </div>
         </div>
 

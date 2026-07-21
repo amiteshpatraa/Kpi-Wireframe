@@ -1,7 +1,7 @@
 import { cn } from './ui/utils';
 import type { ReactNode } from 'react';
 
-interface KPICardProps {
+interface KpiCardProps {
   icon: ReactNode;
   iconBg: string;
   title: string;
@@ -19,12 +19,12 @@ interface KPICardProps {
   onToggle?: () => void;
 }
 
-export function KPICard({
+export function KpiCard({
   icon, iconBg, title, subtitle,
   value, valueLabel,
   delta, deltaPositive,
   className, children, expanded, onToggle,
-}: KPICardProps) {
+}: KpiCardProps) {
   const isClickable = !!onToggle;
 
   return (
