@@ -18,9 +18,10 @@ import {
   ReferenceLine,
   Cell,
   Legend,
+  LabelList,
 } from 'recharts';
 import { type FilterState } from './TimeTrendFilter';
-import { getDashboardData } from '../data/dashboardDataStore';
+import { getDashboardData } from '../data/dataStores';
 import {
   ArrowLeft,
   Package,
@@ -68,6 +69,7 @@ function getInventoryProfile(product: string | undefined, process: string | unde
 }
 
 export function InventoryPage({ filters, onChange }: InventoryPageProps) {
+  const [hoveredBar, setHoveredBar] = useState<{ chartId: string; index: number } | null>(null);
   const [activePillar, setActivePillar] = useState<'SUMMARY' | 'FG' | 'WIP' | 'VELOCITY' | null>(null);
   const [q2Hovered, setQ2Hovered] = useState(false);
   const [q3Hovered, setQ3Hovered] = useState(false);
@@ -86,6 +88,36 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
     fontSize: '10px',
     fontWeight: 600,
     color: '#E0F2FE',
+  };
+
+  const CustomTooltip = ({ active, payload, label, formatter }: any) => {
+    if (active && payload && payload.length) {
+      const isSunday = label === '7' || label === '14' || label === '21' || label === '28';
+      if (isSunday) {
+        return (
+          <div style={TT} className="p-3">
+            <p className="m-0 font-bold">Sunday | Factory Holiday (Plant Shutdown)</p>
+          </div>
+        );
+      }
+      return (
+        <div style={TT} className="p-3 flex flex-col gap-1">
+          <p className="m-0 border-b border-slate-700 pb-1 mb-1 font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+          {payload.map((item: any, idx: number) => {
+            const formatted = formatter ? formatter(item.value, item.name, item, idx, payload) : [item.value, item.name];
+            const val = Array.isArray(formatted) ? formatted[0] : formatted;
+            const nm = Array.isArray(formatted) ? formatted[1] : item.name;
+            return (
+              <p key={idx} className="m-0 flex justify-between gap-4" style={{ color: item.color || item.fill }}>
+                <span>{nm || item.name}:</span>
+                <span>{typeof val === 'number' ? val.toLocaleString() : val}</span>
+              </p>
+            );
+          })}
+        </div>
+      );
+    }
+    return null;
   };
 
   const cardStyle = {
@@ -155,18 +187,16 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
   // ── DYNAMIC INVENTORY PROFILE ──────────────────────────────────────────────
   const invProfile = useMemo(() => {
     return getInventoryProfile(filters.product, filters.process, filters.trend, filters.subPeriod);
-  }, [filters.product, filters.process, filters.trend, filters.subPeriod]);
+  }, [filters.product, filters.process, filters.trend, filters.subPeriod, filters.selectedDate]);
 
   // ── TIME-PERIOD X-AXIS LABELS ─────────────────────────────────────────────
   const timeLabels = useMemo(() => {
     const trend = filters.trend;
-    const sub   = filters.subPeriod;
-    if (trend === 'year' && sub === 'yoy') return Array.from({ length: 16 }, (_, i) => String(2011 + i));
     if (trend === 'quarter') return ['Apr', 'May', 'Jun', 'Jul'];
     if (trend === 'month')   return Array.from({ length: 31 }, (_, i) => String(i + 1));
     if (trend === 'week')    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
-  }, [filters.trend, filters.subPeriod]);
+    return ['Apr', 'May', 'Jun', 'Jul'];
+  }, [filters.trend]);
 
   // ── FG DAILY BURN-DOWN DATA ────────────────────────────────────────────────
   const fgBurndownData = useMemo(() => {
@@ -193,9 +223,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
       let volume = 0;
       const trend = filters.trend;
       const sub = filters.subPeriod;
-      if (trend === 'year' && sub === 'yoy') {
-        volume = Math.round((2800 - (i / 15) * 1000) * scale);
-      } else if (trend === 'quarter') {
+      if (trend === 'quarter') {
         volume = Math.round((1800 + Math.sin(i) * 220) * scale);
       } else if (trend === 'month') {
         const day = i + 1;
@@ -203,8 +231,8 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
       } else if (trend === 'week') {
         volume = Math.round((1750 + (i % 3 === 0 ? 50 : -30)) * scale);
       } else {
-        const monthlyV = [1800, 2020, 1950, 2100, 1780, 1900, 1850];
-        volume = Math.round(monthlyV[i % monthlyV.length] * scale);
+        const monthlyV = [2100, 1780, 1900, 1850];
+        volume = Math.round(monthlyV[i % 4] * scale);
       }
       return { name, volume, safetyStock: invProfile.safetyStock * 100 };
     });
@@ -238,10 +266,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
       let wipUnits = 0;
       let avgDwellHours = 0;
 
-      if (trend === 'year' && sub === 'yoy') {
-        wipUnits = Math.round((4500 - (i / 15) * 2100) * scale);
-        avgDwellHours = +(8.5 - (i / 15) * 5.0).toFixed(1);
-      } else if (trend === 'month') {
+      if (trend === 'month') {
         const day = i + 1;
         if (day === 12) {
           wipUnits = Math.round(680 * scale); // spike on day 12
@@ -258,9 +283,9 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
         wipUnits = Math.round(quarterlyWip[i % quarterlyWip.length] * scale);
         avgDwellHours = +[5.8, 6.2, 5.5, 6.5][i % 4].toFixed(1);
       } else {
-        const monthlyWip = [1900, 2100, 2550, 2300, 2250, 2450, 2405];
-        wipUnits = Math.round(monthlyWip[i % monthlyWip.length] * scale);
-        avgDwellHours = +[5.2, 5.8, 8.2, 6.1, 6.0, 6.4, 6.5][i % 7].toFixed(1);
+        const monthlyWip = [2300, 2250, 2450, 2405];
+        wipUnits = Math.round(monthlyWip[i % 4] * scale);
+        avgDwellHours = +[6.1, 6.0, 6.4, 6.5][i % 4].toFixed(1);
       }
 
       return {
@@ -277,7 +302,6 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
     return raw.filter((s: any) => {
       if (!filters.opSections) return true;
       if (s.section === 'premachining'  && !filters.opSections.premachining)  return false;
-      if (s.section === 'machining'     && !filters.opSections.machining)     return false;
       if (s.section === 'postMachining' && !filters.opSections.postMachining) return false;
       return true;
     });
@@ -289,7 +313,6 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
     return raw.filter((a: any) => {
       if (!filters.opSections) return true;
       if (a.section === 'premachining'  && !filters.opSections.premachining)  return false;
-      if (a.section === 'machining'     && !filters.opSections.machining)     return false;
       if (a.section === 'postMachining' && !filters.opSections.postMachining) return false;
       return true;
     });
@@ -301,7 +324,6 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
     return raw.filter((s: any) => {
       if (!filters.opSections) return true;
       if (s.section === 'premachining'  && !filters.opSections.premachining)  return false;
-      if (s.section === 'machining'     && !filters.opSections.machining)     return false;
       if (s.section === 'postMachining' && !filters.opSections.postMachining) return false;
       return true;
     });
@@ -467,9 +489,9 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
     : activePillar === 'VELOCITY'  ? 'Line Velocity Bottlenecks'
     : 'Summary Dashboard';
 
-  const R_avail = 32;
-  const R_perf = 24;
-  const R_qual = 16;
+  const R_avail = 54;
+  const R_perf = 46;
+  const R_qual = 38;
   const C_avail = 2 * Math.PI * R_avail;
   const C_perf = 2 * Math.PI * R_perf;
   const C_qual = 2 * Math.PI * R_qual;
@@ -508,12 +530,10 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
     
     const localTimeLabels = useMemo(() => {
       const trend = lock.effectiveFilters.trend;
-      const sub = lock.effectiveFilters.subPeriod;
-      if (trend === 'year' && sub === 'yoy') return Array.from({ length: 16 }, (_, i) => String(2011 + i));
       if (trend === 'quarter') return ['Apr', 'May', 'Jun', 'Jul'];
       if (trend === 'month') return Array.from({ length: 31 }, (_, i) => String(i + 1));
       if (trend === 'week') return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-      return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+      return ['Apr', 'May', 'Jun', 'Jul'];
     }, [lock.effectiveFilters.trend, lock.effectiveFilters.subPeriod]);
 
     const localFgData = useMemo(() => {
@@ -522,9 +542,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
         let volume = 0;
         const trend = lock.effectiveFilters.trend;
         const sub = lock.effectiveFilters.subPeriod;
-        if (trend === 'year' && sub === 'yoy') {
-          volume = Math.round((2800 - (i / 15) * 1000) * scale);
-        } else if (trend === 'quarter') {
+        if (trend === 'quarter') {
           volume = Math.round((1800 + Math.sin(i) * 220) * scale);
         } else if (trend === 'month') {
           const day = i + 1;
@@ -532,8 +550,8 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
         } else if (trend === 'week') {
           volume = Math.round((1750 + (i % 3 === 0 ? 50 : -30)) * scale);
         } else {
-          const monthlyV = [1800, 2020, 1950, 2100, 1780, 1900, 1850];
-          volume = Math.round(monthlyV[i % monthlyV.length] * scale);
+          const monthlyV = [2100, 1780, 1900, 1850];
+          volume = Math.round(monthlyV[i % 4] * scale);
         }
         return { name, volume };
       });
@@ -569,9 +587,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
       const tags: { text: string; type: 'period' | 'product' | 'process' }[] = [];
       
       // Period Tag
-      if (f.trend === 'year' && f.subPeriod === 'yoy') {
-        tags.push({ text: 'YoY', type: 'period' });
-      } else if (f.trend === 'quarter') {
+      if (f.trend === 'quarter') {
         tags.push({ text: 'QTD', type: 'period' });
       } else if (f.trend === 'month') {
         tags.push({ text: 'MTD', type: 'period' });
@@ -696,12 +712,37 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
           )}
           {pillar.id === 'WIP' && (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={localWipWaterfall} barCategoryGap="25%" margin={{ top: 2, right: 2, left: -40, bottom: 2 }}>
+              <BarChart data={localWipWaterfall} barCategoryGap="20%" margin={{ top: 2, right: 2, left: -40, bottom: 2 }}>
                 <Bar dataKey="base" stackId="wf" fill="transparent" legendType="none" />
-                <Bar dataKey="value" stackId="wf" maxBarSize={22}>
-                  {localWipWaterfall.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.isAdd ? "#B45309" : "#14B8A6"} />
-                  ))}
+                <Bar
+                  dataKey="value"
+                  stackId="wf"
+                  maxBarSize={20}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                >
+                  {localWipWaterfall.map((entry, index) => {
+                    const isActive = hoveredBar?.chartId === 'wip_waterfall' && hoveredBar?.index === index;
+                    const isAnyActive = hoveredBar?.chartId === 'wip_waterfall';
+                    const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                    return (
+                      <Cell
+                        key={`cell-waterfall-${index}`}
+                        fill={entry.isAdd ? "#B45309" : "#14B8A6"}
+                        opacity={opacity}
+                        onMouseEnter={() => setHoveredBar({ chartId: 'wip_waterfall', index })}
+                        onMouseLeave={() => setHoveredBar(null)}
+                        style={{
+                          transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                          transformOrigin: 'bottom center',
+                          filter: isActive ? 'drop-shadow(0 0 6px #10B981)' : 'none',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    );
+                  })}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -762,7 +803,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
       { key: 'rawMaterial',    label: 'Raw Material',  stroke: '#BDE8F5', gradFrom: '#BDE8F5', gradTo: '#E8F9FE', gradId: 'jrRaw',  threshold: 180 },
       { key: 'preMachining',   label: 'Pre-Mach.',     stroke: '#4988C4', gradFrom: '#4988C4', gradTo: '#BDE8F5', gradId: 'jrPre',  threshold: 330 },
       { key: 'machining',      label: 'Machining',     stroke: '#1C4D8D', gradFrom: '#1C4D8D', gradTo: '#4988C4', gradId: 'jrMach', threshold: 420 },
-      { key: 'assembly',       label: 'Assembly',      stroke: '#7C3AED', gradFrom: '#7C3AED', gradTo: '#A78BFA', gradId: 'jrAssy', threshold: 260 },
+      { key: 'assembly',       label: 'Post Machining', stroke: '#7C3AED', gradFrom: '#7C3AED', gradTo: '#A78BFA', gradId: 'jrAssy', threshold: 260 },
       { key: 'qualInspection', label: 'QC Insp.',      stroke: '#FFB090', gradFrom: '#FFB090', gradTo: '#FFF1D3', gradId: 'jrQual', threshold: 140 },
     ] as const;
 
@@ -896,7 +937,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
           </div>
           <div style={{ height: 240, width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={fgBurndownData} barCategoryGap="25%" margin={{ top: 15, right: 24, left: -10, bottom: 10 }}>
+              <ComposedChart data={fgBurndownData} barCategoryGap="20%" margin={{ top: 15, right: 24, left: -10, bottom: 10 }}>
                 <defs>
                   <linearGradient id="burndownGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={GOLD} stopOpacity={0.35} />
@@ -910,7 +951,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                 <XAxis dataKey="day" tick={{ fontSize: 7, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} interval={4} />
                 <YAxis tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} domain={[0, 2400]} />
-                <Tooltip contentStyle={TT} formatter={(v: any, n: string) => [`${Number(v).toLocaleString()} units`, n]} />
+                <Tooltip content={<CustomTooltip formatter={(v: any, n: string) => [`${Number(v).toLocaleString()} units`, n]} />} />
                 <Area type="monotone" dataKey="safetyStock" name="Safety Zone" stroke="none" fill="url(#safetyZoneGrad)" isAnimationActive={false} />
                 <ReferenceLine y={invProfile.safetyStock * 100} stroke="#EF4444" strokeDasharray="4 2" strokeWidth={1.5}
                   label={{ value: `Safety Stock ${invProfile.safetyStock * 100}`, fill: '#EF4444', fontSize: 7, position: 'insideTopLeft', fontWeight: 'bold' }} />
@@ -945,7 +986,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
               { label: 'Raw Mat.', color: '#BDE8F5' },
               { label: 'Pre-Mach.', color: '#4988C4' },
               { label: 'Machining', color: '#1C4D8D' },
-              { label: 'Assembly', color: '#7C3AED' },
+              { label: 'Post Machining', color: '#7C3AED' },
               { label: 'QC Insp.', color: '#FFB090' },
             ] as const).map(s => (
               <span key={s.label} className="flex items-center gap-1 text-[7px] font-black text-slate-500 uppercase">
@@ -977,9 +1018,8 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
               <YAxis dataKey="cycleTime" name="Cycle Time" type="number" domain={[1.5, 5.5]} tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}d`} />
               <ZAxis range={[28, 28]} />
               <Tooltip
-                contentStyle={TT}
+                content={<CustomTooltip formatter={(v: any, name: string) => [name === 'cycleTime' ? `${v}d` : `Day ${v}`, name === 'cycleTime' ? 'Cycle Time' : 'Day']} />}
                 cursor={{ strokeDasharray: '3 3', stroke: '#94A3B8' }}
-                formatter={(v: any, name: string) => [name === 'cycleTime' ? `${v}d` : `Day ${v}`, name === 'cycleTime' ? 'Cycle Time' : 'Day']}
               />
               <ReferenceLine y={3.5} stroke="#EF4444" strokeDasharray="4 2" strokeWidth={1.5}
                 label={{ value: 'Target 3.5d', fill: '#EF4444', fontSize: 7, position: 'insideTopRight', fontWeight: 'bold' }} />
@@ -1018,7 +1058,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
 
           <div style={{ height: 280, width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={fgAgingData} barCategoryGap="25%" margin={{ top: 20, right: 10, left: -20, bottom: 10 }}>
+              <ComposedChart data={fgAgingData} barCategoryGap="20%" margin={{ top: 20, right: 10, left: -20, bottom: 10 }}>
                 <defs>
                   <linearGradient id="fgTealGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#14B8A6" stopOpacity={1} />
@@ -1029,8 +1069,48 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
                 <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} />
                 <YAxis yAxisId="left" tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} label={{ value: 'FG Volume', angle: -90, position: 'insideLeft', offset: 20, fontSize: 7, fill: '#94A3B8' }} />
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} tickFormatter={formatValuation} label={{ value: 'Holding Cost', angle: 90, position: 'insideRight', offset: 10, fontSize: 7, fill: '#94A3B8' }} />
-                <Tooltip contentStyle={TT} formatter={(v: any, n: string) => [n === 'Holding Cost' ? formatValuation(v) : `${v} units`, n]} />
-                <Bar yAxisId="left" dataKey="fgVolume" name="FG Volume" fill="url(#fgTealGrad)" maxBarSize={30} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                <Tooltip content={<CustomTooltip formatter={(v: any, n: string) => [n === 'Holding Cost' ? formatValuation(v) : `${v} units`, n]} />} />
+                <Bar
+                  yAxisId="left"
+                  dataKey="fgVolume"
+                  name="FG Volume"
+                  fill="url(#fgTealGrad)"
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={30}
+                >
+                  {fgAgingData.map((entry: any, index: number) => {
+                    const isActive = hoveredBar?.chartId === 'fg_aging' && hoveredBar?.index === index;
+                    const isAnyActive = hoveredBar?.chartId === 'fg_aging';
+                    const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                    return (
+                      <Cell
+                        key={`cell-fg-aging-${index}`}
+                        fill="url(#fgTealGrad)"
+                        opacity={opacity}
+                        onMouseEnter={() => setHoveredBar({ chartId: 'fg_aging', index })}
+                        onMouseLeave={() => setHoveredBar(null)}
+                        style={{
+                          transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                          transformOrigin: 'bottom center',
+                          filter: isActive ? 'drop-shadow(0 0 6px #10B981)' : 'none',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    );
+                  })}
+                  <LabelList
+                    dataKey="fgVolume"
+                    position="top"
+                    formatter={(v: number) => Math.round(v).toLocaleString()}
+                    fontSize={8}
+                    fontWeight={700}
+                    fill="#475569"
+                  />
+                </Bar>
                 <Line yAxisId="right" type="monotone" dataKey="cost" name="Holding Cost" stroke="#F59E0B" strokeWidth={2.5} dot={{ r: 5, fill: '#F59E0B', stroke: 'white', strokeWidth: 1.5 }} isAnimationActive={false} />
                 <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
               </ComposedChart>
@@ -1052,7 +1132,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
                 <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} interval={filters.trend === 'month' ? 4 : 0} />
                 <YAxis yAxisId="l" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} />
                 <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TT} />
+                <Tooltip content={<CustomTooltip />} />
                 <ReferenceLine yAxisId="l" y={invProfile.safetyStock * 100} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Safety Stock', fill: '#EF4444', position: 'insideTopLeft', fontSize: 7, fontWeight: 'bold' }} />
                 <Line yAxisId="l" type="monotone" dataKey="fgLevel" name="FG Stock" stroke={GOLD} strokeWidth={2.5} dot={{ r: 4.5, fill: GOLD, stroke: '#FFFFFF', strokeWidth: 1.5 }} />
                 <Line yAxisId="r" type="monotone" dataKey="shipments" name="Shipments" stroke={ORANGE} strokeWidth={2.5} dot={{ r: 4.5, fill: ORANGE, stroke: '#FFFFFF', strokeWidth: 1.5 }} />
@@ -1080,7 +1160,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
         </div>
         <div style={{ height: 260, width: '100%' }}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={dynamicWipData} barCategoryGap="25%" margin={{ top: 20, right: 40, left: -10, bottom: 10 }}>
+            <ComposedChart data={dynamicWipData} barCategoryGap="20%" margin={{ top: 20, right: 40, left: -10, bottom: 10 }}>
               <defs>
                 <linearGradient id="wipTealGradLocal" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#14B8A6" stopOpacity={1} />
@@ -1091,10 +1171,50 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
               <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="left" tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} label={{ value: 'WIP Units', angle: -90, position: 'insideLeft', offset: 20, fontSize: 7, fill: '#94A3B8' }} />
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}h`} label={{ value: 'Dwell (h)', angle: 90, position: 'insideRight', offset: 10, fontSize: 7, fill: '#94A3B8' }} />
-              <Tooltip contentStyle={TT} formatter={(v: any, n: string) => [n === 'Avg Dwell Time' ? `${v}h` : `${v} units`, n]} />
+              <Tooltip content={<CustomTooltip formatter={(v: any, n: string) => [n === 'Avg Dwell Time' ? `${v}h` : `${v} units`, n]} />} />
               <ReferenceLine yAxisId="left" y={invProfile.maxBuffer} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5}
                 label={{ value: `Max Buffer Limit ${invProfile.maxBuffer}`, fill: '#EF4444', fontSize: 7, fontWeight: 'bold', position: 'insideTopRight' }} />
-              <Bar yAxisId="left" dataKey="wipUnits" name="WIP Units" fill="url(#wipTealGradLocal)" maxBarSize={22} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+              <Bar
+                yAxisId="left"
+                dataKey="wipUnits"
+                name="WIP Units"
+                fill="url(#wipTealGradLocal)"
+                isAnimationActive={true}
+                animationDuration={1200}
+                animationEasing="ease-out"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={20}
+              >
+                {dynamicWipData.map((entry: any, index: number) => {
+                  const isActive = hoveredBar?.chartId === 'wip_units' && hoveredBar?.index === index;
+                  const isAnyActive = hoveredBar?.chartId === 'wip_units';
+                  const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                  return (
+                    <Cell
+                      key={`cell-wip-units-${index}`}
+                      fill="url(#wipTealGradLocal)"
+                      opacity={opacity}
+                      onMouseEnter={() => setHoveredBar({ chartId: 'wip_units', index })}
+                      onMouseLeave={() => setHoveredBar(null)}
+                      style={{
+                        transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                        transformOrigin: 'bottom center',
+                        filter: isActive ? 'drop-shadow(0 0 6px #10B981)' : 'none',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  );
+                })}
+                <LabelList
+                  dataKey="wipUnits"
+                  position="top"
+                  formatter={(v: number) => Math.round(v).toLocaleString()}
+                  fontSize={8}
+                  fontWeight={700}
+                  fill="#475569"
+                />
+              </Bar>
               <Line yAxisId="right" type="monotone" dataKey="avgDwellHours" name="Avg Dwell Time" stroke="#F5788B" strokeWidth={2.5} dot={{ r: 5, fill: '#F5788B', stroke: 'white', strokeWidth: 1.5 }} isAnimationActive={false} />
               <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
             </ComposedChart>
@@ -1114,15 +1234,133 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
           </div>
           <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={wipAging} layout="vertical" barCategoryGap="25%" margin={{ top: 10, right: 24, left: 10, bottom: 10 }}>
+              <BarChart data={wipAging} layout="vertical" barCategoryGap="20%" margin={{ top: 10, right: 24, left: 10, bottom: 10 }}>
                 <GradDefs />
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} unit=" units" />
                 <YAxis dataKey="station" type="category" tick={{ fontSize: 9, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TT} />
-                <Bar dataKey="fresh"    name="Fresh (<24h)"    fill={EMERALD} stackId="age" maxBarSize={22} />
-                <Bar dataKey="standard" name="Standard (24-48h)" fill={AMBER}   stackId="age" maxBarSize={22} />
-                <Bar dataKey="delayed"  name="Delayed (>48h)"  fill={RED}     stackId="age" radius={[0, 3, 3, 0]} maxBarSize={22} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar
+                  dataKey="fresh"
+                  name="Fresh (<24h)"
+                  fill="url(#emeraldGrad)"
+                  stackId="age"
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                  maxBarSize={20}
+                >
+                  {wipAging.map((entry: any, index: number) => {
+                    const isActive = hoveredBar?.chartId === 'wip_aging' && hoveredBar?.index === index;
+                    const isAnyActive = hoveredBar?.chartId === 'wip_aging';
+                    const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                    return (
+                      <Cell
+                        key={`cell-fresh-${index}`}
+                        fill="url(#emeraldGrad)"
+                        opacity={opacity}
+                        onMouseEnter={() => setHoveredBar({ chartId: 'wip_aging', index })}
+                        onMouseLeave={() => setHoveredBar(null)}
+                        style={{
+                          transform: isActive ? 'scaleX(1.05)' : 'scaleX(1)',
+                          transformOrigin: 'left center',
+                          filter: isActive ? 'drop-shadow(0 0 6px #10B981)' : 'none',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    );
+                  })}
+                  <LabelList
+                    dataKey="fresh"
+                    position="right"
+                    formatter={(v: number) => v > 0 ? Math.round(v) : ''}
+                    fontSize={8}
+                    fontWeight={700}
+                    fill="#475569"
+                  />
+                </Bar>
+                <Bar
+                  dataKey="standard"
+                  name="Standard (24-48h)"
+                  fill="url(#amberGrad)"
+                  stackId="age"
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                  maxBarSize={20}
+                >
+                  {wipAging.map((entry: any, index: number) => {
+                    const isActive = hoveredBar?.chartId === 'wip_aging' && hoveredBar?.index === index;
+                    const isAnyActive = hoveredBar?.chartId === 'wip_aging';
+                    const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                    return (
+                      <Cell
+                        key={`cell-standard-${index}`}
+                        fill="url(#amberGrad)"
+                        opacity={opacity}
+                        onMouseEnter={() => setHoveredBar({ chartId: 'wip_aging', index })}
+                        onMouseLeave={() => setHoveredBar(null)}
+                        style={{
+                          transform: isActive ? 'scaleX(1.05)' : 'scaleX(1)',
+                          transformOrigin: 'left center',
+                          filter: isActive ? 'drop-shadow(0 0 6px #10B981)' : 'none',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    );
+                  })}
+                  <LabelList
+                    dataKey="standard"
+                    position="right"
+                    formatter={(v: number) => v > 0 ? Math.round(v) : ''}
+                    fontSize={8}
+                    fontWeight={700}
+                    fill="#475569"
+                  />
+                </Bar>
+                <Bar
+                  dataKey="delayed"
+                  name="Delayed (>48h)"
+                  fill="url(#redGrad)"
+                  stackId="age"
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                  radius={[0, 4, 4, 0]}
+                  maxBarSize={20}
+                >
+                  {wipAging.map((entry: any, index: number) => {
+                    const isActive = hoveredBar?.chartId === 'wip_aging' && hoveredBar?.index === index;
+                    const isAnyActive = hoveredBar?.chartId === 'wip_aging';
+                    const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                    return (
+                      <Cell
+                        key={`cell-delayed-${index}`}
+                        fill="url(#redGrad)"
+                        opacity={opacity}
+                        onMouseEnter={() => setHoveredBar({ chartId: 'wip_aging', index })}
+                        onMouseLeave={() => setHoveredBar(null)}
+                        style={{
+                          transform: isActive ? 'scaleX(1.05)' : 'scaleX(1)',
+                          transformOrigin: 'left center',
+                          filter: isActive ? 'drop-shadow(0 0 6px #10B981)' : 'none',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    );
+                  })}
+                  <LabelList
+                    dataKey="delayed"
+                    position="right"
+                    formatter={(v: number) => v > 0 ? Math.round(v) : ''}
+                    fontSize={8}
+                    fontWeight={700}
+                    fill="#475569"
+                  />
+                </Bar>
                 <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
               </BarChart>
             </ResponsiveContainer>
@@ -1149,7 +1387,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                 <XAxis dataKey="station" tick={{ fontSize: 9, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TT} />
+                <Tooltip content={<CustomTooltip />} />
                 <Line type="monotone" dataKey="processing" name="Processing Time" stroke={TEAL} strokeWidth={2.5} dot={{ r: 4.5, fill: TEAL, stroke: '#FFFFFF', strokeWidth: 1.5 }} />
                 <Line type="monotone" dataKey="queue" name="Queue Wait Time" stroke={ORANGE} strokeWidth={2.5} dot={{ r: 4.5, fill: ORANGE, stroke: '#FFFFFF', strokeWidth: 1.5 }} />
                 <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
@@ -1277,41 +1515,41 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
               />
 
               {/* Rings & Info Side-by-Side */}
-              <div className="flex items-center justify-around py-4">
+              <div className="flex items-center justify-between gap-6 py-4 px-2">
                 {/* Concentric rings */}
-                <div className="relative w-[110px] h-[110px] shrink-0">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="55" cy="55" r={R_avail} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_perf} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_qual} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_avail} fill="transparent" stroke={GOLD} strokeWidth="5" strokeDasharray={C_avail} strokeDashoffset={dashoffsetAvail} strokeLinecap="round" />
-                    <circle cx="55" cy="55" r={R_perf} fill="transparent" stroke={TEAL} strokeWidth="5" strokeDasharray={C_perf} strokeDashoffset={dashoffsetPerf} strokeLinecap="round" />
-                    <circle cx="55" cy="55" r={R_qual} fill="transparent" stroke={ICE} strokeWidth="5" strokeDasharray={C_qual} strokeDashoffset={dashoffsetQual} strokeLinecap="round" />
+                <div className="relative w-28 h-28 sm:w-34 sm:h-34 shrink-0 flex items-center justify-center">
+                  <svg viewBox="0 0 120 120" className="w-full h-full transform -rotate-90">
+                    <circle cx="60" cy="60" r={R_avail} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_perf} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_qual} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_avail} fill="transparent" stroke={GOLD} strokeWidth="4" strokeDasharray={C_avail} strokeDashoffset={dashoffsetAvail} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+                    <circle cx="60" cy="60" r={R_perf} fill="transparent" stroke={TEAL} strokeWidth="4" strokeDasharray={C_perf} strokeDashoffset={dashoffsetPerf} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+                    <circle cx="60" cy="60" r={R_qual} fill="transparent" stroke={ICE} strokeWidth="4" strokeDasharray={C_qual} strokeDashoffset={dashoffsetQual} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
                   </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                    <span className="text-sm font-black text-slate-800">{invProfile.stockTurns}x</span>
-                    <span className="text-[6px] text-slate-400 font-bold uppercase tracking-wider">Turns</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                    <span className="text-sm sm:text-base font-black text-slate-800 tracking-tight leading-none">{invProfile.stockTurns}x</span>
+                    <span className="text-[7.5px] text-slate-400 font-extrabold uppercase tracking-widest mt-1">Turns</span>
                   </div>
                 </div>
 
                 {/* Vertical detail ledger */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: GOLD }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: GOLD }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">FG Stock Turns</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{invProfile.stockTurns}x <span className="text-[8px] text-slate-400 font-normal">/ 8x target</span></p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TEAL }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: TEAL }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">Days of Cover</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{invProfile.daysOfCover} Days <span className="text-[8px] text-slate-400 font-normal">/ 10d target</span></p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ICE }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ICE }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">Active WIP</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{invProfile.wipOnFloor.toLocaleString()} <span className="text-[8px] text-slate-400 font-normal">/ 2k target</span></p>

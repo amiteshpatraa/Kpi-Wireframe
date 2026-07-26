@@ -1,4 +1,4 @@
-import { PeriodId, ProductId, getTimeLabels } from './types';
+import { PeriodId, ProductId, getTimeLabels, isSundayMtd } from './types';
 
 export function resolveCopqData(period: PeriodId, product: ProductId, process: string, shift?: string): any {
   const tLabels = getTimeLabels(period);
@@ -8,9 +8,7 @@ export function resolveCopqData(period: PeriodId, product: ProductId, process: s
   const isEOL = process === 'EOL';
 
   let ytdLoss = 2125000;
-  if (period === 'YoY') {
-    ytdLoss = 18500000;
-  } else if (period === 'QTD') {
+  if (period === 'QTD') {
     ytdLoss = 1250000;
   } else if (period === 'MTD') {
     ytdLoss = 2100000;
@@ -82,8 +80,8 @@ export function resolveCopqData(period: PeriodId, product: ProductId, process: s
         sCScrap = Math.round(baseScrap * 0.33); sCRework = Math.round(baseRework * 0.33);
       }
     } else {
-      const baseScrap = [1500, 5200, 2900, 6400, 3100, 4700, 42500][i % 7] * 0.45;
-      const baseRework = [1500, 5200, 2900, 6400, 3100, 4700, 42500][i % 7] * 0.55;
+      const baseScrap = [6400, 3100, 4700, 42500][i % 4] * 0.45;
+      const baseRework = [6400, 3100, 4700, 42500][i % 4] * 0.55;
       sAScrap = Math.round(baseScrap * scale * 0.33); sARework = Math.round(baseRework * scale * 0.33);
       sBScrap = Math.round(baseScrap * scale * 0.34); sBRework = Math.round(baseRework * scale * 0.34);
       sCScrap = Math.round(baseScrap * scale * 0.33); sCRework = Math.round(baseRework * scale * 0.33);
@@ -142,6 +140,45 @@ export function resolveCopqData(period: PeriodId, product: ProductId, process: s
 
   const targetValue = isLW1 ? 300000 : (product === 'MATRIX' ? 100000 : (product === 'BANANA' ? 250000 : 150000));
 
+  if (period === 'MTD') {
+    for (let i = 0; i < tLabels.length; i++) {
+      if (isSundayMtd(period, i)) {
+        if (internalFailureData[i]) {
+          internalFailureData[i] = {
+            name: internalFailureData[i].name,
+            shiftA: 0,
+            shiftB: 0,
+            shiftC: 0,
+            totalLoss: 0
+          };
+        }
+        if (externalFailureBulletData[i]) {
+          externalFailureBulletData[i] = {
+            name: externalFailureBulletData[i].name,
+            actual: 0,
+            target: 5000,
+            budget: 10000
+          };
+        }
+        if (preventionAppraisalData[i]) {
+          preventionAppraisalData[i] = {
+            name: preventionAppraisalData[i].name,
+            prevention: 0,
+            appraisal: 0
+          };
+        }
+        if (summaryTrendData[i]) {
+          summaryTrendData[i] = {
+            name: summaryTrendData[i].name,
+            internal: 0,
+            external: 0,
+            prevention: 0
+          };
+        }
+      }
+    }
+  }
+
   const result = {
     ytdLoss,
     fpy,
@@ -156,6 +193,7 @@ export function resolveCopqData(period: PeriodId, product: ProductId, process: s
     preventionAppraisalData,
     supplierQualityMatrix,
     summaryTrendData,
+    warrantyClaimsTable: WARRANTY_CLAIMS,
     targetValue,
     icon: 'TrendingDown',
     gradient: ['#7C3AED', '#6D28D9'],
@@ -184,3 +222,44 @@ export function resolveCopqData(period: PeriodId, product: ProductId, process: s
 
   return result;
 }
+
+export const PILLARS = [
+  {
+    id: 'INTERNAL' as const,
+    label: 'Internal Failures',
+    value: '$1.42M',
+    target: '$1.20M',
+    color: '#7C3AED',
+  },
+  {
+    id: 'EXTERNAL' as const,
+    label: 'External Failures',
+    value: '$485K',
+    target: '$350K',
+    color: '#EF4444',
+  },
+  {
+    id: 'PREVENTION' as const,
+    label: 'Prevention & Appraisal',
+    value: '$220K',
+    target: '$250K',
+    color: '#10B981',
+  },
+  {
+    id: 'QUALITY' as const,
+    label: 'First Pass Yield (FPY)',
+    value: '94.2%',
+    target: '98.5%',
+    color: '#3B82F6',
+  },
+] as const;
+
+export type ActiveCopqPillar = typeof PILLARS[number]['id'] | null;
+
+export const WARRANTY_CLAIMS = [
+  { claimId: 'CLM-9021', sku: '2002254-00-E06', customer: 'Tesla Fremont', cost: '$18,400', defect: 'Laser Weld Porosity', status: 'Approved' },
+  { claimId: 'CLM-9022', sku: '2002254-00-E08', customer: 'Rivian Normal', cost: '$11,200', defect: 'Sticker Alignment Missing', status: 'Under Review' },
+  { claimId: 'CLM-9023', sku: '2002254-00-E10', customer: 'Lucid Casa Grande', cost: '$7,600', defect: 'O-ring Micro-Crack', status: 'Approved' },
+  { claimId: 'CLM-9024', sku: '2002254-00-E12', customer: 'GM Factory ZERO', cost: '$3,100', defect: 'Surface Scratch', status: 'Rejected' },
+];
+

@@ -19,9 +19,10 @@ import {
   Line,
   PieChart,
   Pie,
+  LabelList,
 } from 'recharts';
 import { type FilterState } from './TimeTrendFilter';
-import { getDashboardData } from '../data/dashboardDataStore';
+import { getDashboardData } from '../data/dataStores';
 import {
   ArrowLeft,
   Truck,
@@ -34,6 +35,7 @@ import {
 } from 'lucide-react';
 import { CardLockHeader, lockedCardStyle } from './CardLockHeader';
 import { usePageCardLocks } from './useCardFilterLock';
+import { PILLARS, DELAY_BREAKDOWN, type ActiveOtifPillar } from '../data/dataStores/otifDataStore';
 
 interface OtifPageProps {
   filters: FilterState;
@@ -86,6 +88,18 @@ function IconPill({ icon: Icon, color, bg }: { icon: React.ElementType; color: s
 function GradDefs() {
   return (
     <defs>
+      <linearGradient id="gPlannedGrey" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#CBD5E1" stopOpacity={1} />
+        <stop offset="100%" stopColor="#94A3B8" stopOpacity={0.8} />
+      </linearGradient>
+      <linearGradient id="gPlannedBlue" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#4988C4" stopOpacity={1} />
+        <stop offset="100%" stopColor="#1C4D8D" stopOpacity={0.8} />
+      </linearGradient>
+      <linearGradient id="gFabricated" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#8FDDDF" stopOpacity={1} />
+        <stop offset="100%" stopColor="#5BBEBF" stopOpacity={0.8} />
+      </linearGradient>
       {/* Premium Sunset Coral, Apricot & Mint Palette */}
       <linearGradient id="gSeries1" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor="#EC6530" />
@@ -116,62 +130,59 @@ function GradDefs() {
 }
 
 // Concentric Radial Progress Ring Component for Quadrant 1
-function ConcentricRadialRing() {
-  const r1 = 43; // Enlarged concentric radial rings
+function ConcentricRadialRing({ otifValue }: { otifValue: number }) {
+  const r1 = 54;
   const c1 = 2 * Math.PI * r1;
-  const offset1 = c1 * (1 - 0.942);
+  const offset1 = c1 * (1 - Math.min(100, otifValue) / 100);
 
-  const r2 = 33;
+  const r2 = 46;
   const c2 = 2 * Math.PI * r2;
   const offset2 = c2 * (1 - 0.964);
 
-  const r3 = 23;
+  const r3 = 38;
   const c3 = 2 * Math.PI * r3;
   const offset3 = c3 * (1 - 0.918);
 
   return (
-    <div className="relative flex items-center justify-center w-[170px] h-[170px] shrink-0 select-none">
-      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+    <div className="relative flex items-center justify-center w-36 h-36 sm:w-40 sm:h-40 shrink-0 select-none">
+      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
         {/* Background track circles */}
-        <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="6" />
-        <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="6" />
-        <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="6" />
+        <circle cx="60" cy="60" r={r1} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="4" />
+        <circle cx="60" cy="60" r={r2} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="4" />
+        <circle cx="60" cy="60" r={r3} fill="transparent" stroke="#FFE3E3" strokeOpacity={0.5} strokeWidth="4" />
 
         {/* Progress circles */}
-        {/* Ring 1 (Outer): Overall OTIF - Coral */}
         <circle
-          cx="50"
-          cy="50"
+          cx="60"
+          cy="60"
           r={r1}
           fill="transparent"
           stroke="#EC6530"
-          strokeWidth="6"
+          strokeWidth="4"
           strokeDasharray={c1}
           strokeDashoffset={offset1}
           strokeLinecap="round"
           style={{ transition: 'stroke-dashoffset 0.5s ease' }}
         />
-        {/* Ring 2 (Middle): In-Full Adherence - Apricot */}
         <circle
-          cx="50"
-          cy="50"
+          cx="60"
+          cy="60"
           r={r2}
           fill="transparent"
           stroke="#FFAE6E"
-          strokeWidth="6"
+          strokeWidth="4"
           strokeDasharray={c2}
           strokeDashoffset={offset2}
           strokeLinecap="round"
           style={{ transition: 'stroke-dashoffset 0.5s ease' }}
         />
-        {/* Ring 3 (Inner): On-Time Adherence - Mint */}
         <circle
-          cx="50"
-          cy="50"
+          cx="60"
+          cy="60"
           r={r3}
           fill="transparent"
           stroke="#8FDDDF"
-          strokeWidth="6"
+          strokeWidth="4"
           strokeDasharray={c3}
           strokeDashoffset={offset3}
           strokeLinecap="round"
@@ -179,15 +190,16 @@ function ConcentricRadialRing() {
         />
       </svg>
       {/* Center Label */}
-      <div className="absolute flex flex-col items-center justify-center">
-        <span style={{ color: T.numColor, fontSize: '20px', fontWeight: 800 }}>94.2%</span>
-        <span style={{ color: T.mutedColor, fontSize: '8px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>OTIF INDEX</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+        <span style={{ color: T.numColor, fontSize: '15px', fontWeight: 800, lineHeight: 1 }}>{otifValue}%</span>
+        <span style={{ color: T.mutedColor, fontSize: '7.5px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', marginTop: '3px' }}>OTIF INDEX</span>
       </div>
     </div>
   );
 }
 
 export function OtifPage({ filters, onChange }: OtifPageProps) {
+  const [hoveredBar, setHoveredBar] = useState<{ chartId: string; index: number } | null>(null);
   const [currentView, setCurrentView] = useState<OtifView>('SUMMARY_CARD');
   const [activePillar, setActivePillar] = useState<PillarId>('DISPATCH');
   const [q2Hovered, setQ2Hovered] = useState(false);
@@ -196,9 +208,39 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
   // Per-card local filter locks: [Q1, Q2, Q3, Q4]
   const [q1Lock, q2Lock, q3Lock, q4Lock] = usePageCardLocks(filters, 4);
 
+  const CustomTooltip = ({ active, payload, label, formatter }: any) => {
+    if (active && payload && payload.length) {
+      const isSunday = label === '7' || label === '14' || label === '21' || label === '28';
+      if (isSunday) {
+        return (
+          <div style={T.tt}>
+            <p className="m-0 font-bold">Sunday | Factory Holiday (Plant Shutdown)</p>
+          </div>
+        );
+      }
+      return (
+        <div style={T.tt} className="flex flex-col gap-1">
+          <p className="m-0 border-b border-slate-700 pb-1 mb-1 font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+          {payload.map((item: any, idx: number) => {
+            const formatted = formatter ? formatter(item.value, item.name, item, idx, payload) : [item.value, item.name];
+            const val = Array.isArray(formatted) ? formatted[0] : formatted;
+            const nm = Array.isArray(formatted) ? formatted[1] : item.name;
+            return (
+              <p key={idx} className="m-0 flex justify-between gap-4" style={{ color: item.color || item.fill }}>
+                <span>{nm || item.name}:</span>
+                <span>{typeof val === 'number' ? val.toLocaleString() : val}</span>
+              </p>
+            );
+          })}
+        </div>
+      );
+    }
+    return null;
+  };
+
   const q1Otif = useMemo(() => {
     return getDashboardData('OTIF', q1Lock.effectiveFilters.subPeriod || q1Lock.effectiveFilters.trend, q1Lock.effectiveFilters.product, q1Lock.effectiveFilters.process);
-  }, [q1Lock.effectiveFilters]);
+  }, [q1Lock.effectiveFilters.trend, q1Lock.effectiveFilters.subPeriod, q1Lock.effectiveFilters.selectedDate, q1Lock.effectiveFilters.product, q1Lock.effectiveFilters.process]);
 
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -211,12 +253,8 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
     const sub = filters.subPeriod;
 
     if (trend === 'year') {
-      if (sub === 'yoy') {
-        // YoY: 15-year sequence (2011 to 2026)
-        return Array.from({ length: 16 }, (_, i) => String(2011 + i));
-      }
-      // YTD: January to current month
-      return monthNames.slice(0, currentMonthIdx + 1);
+      // YTD: Fiscal YTD starting from April
+      return ['Apr', 'May', 'Jun', 'Jul'];
     }
 
     if (trend === 'quarter') {
@@ -250,64 +288,12 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
 
   const seed = useMemo(() => filters.shift.length + filters.line.length + (filters.trend.length * 10), [filters]);
 
-  const otifSummaryData = useMemo(() => timeLabels.map((name, i) => {
-    const scheduled = 1000 + (seed * 10) + Math.round(Math.sin(i + seed) * 200);
-    const delivered = scheduled - Math.round(Math.abs(Math.cos(i) * 100));
-    const pct = Number(((delivered / scheduled) * 100).toFixed(1));
-    return { name, scheduled, delivered, pct };
-  }), [timeLabels, seed]);
-
-  const dispatchAdherenceData = useMemo(() => timeLabels.map((name, i) => {
-    const onTime = 300 + (seed * 2) + Math.round(Math.sin(i) * 50);
-    const delayed = 10 + Math.round(Math.cos(i + seed) * 20);
-    return { name, onTime, delayed };
-  }), [timeLabels, seed]);
-
-  const productionPlanActualData = useMemo(() => timeLabels.map((name, i) => {
-    const plan = 1200 + (seed * 5) + Math.round(Math.cos(i) * 80);
-    const actual = plan - 50 + Math.round(Math.sin(i * 1.2 + seed) * 150);
-    const variance = Number((((actual - plan) / plan) * 100).toFixed(1));
-    const adherence = Math.min(100, Math.max(60, Math.round(95 + (actual - plan) / plan * 8)));
-    return { name, plan, actual, variance, adherence };
-  }), [timeLabels, seed]);
-
-  const materialReadinessData = useMemo(() => timeLabels.map((name, i) => {
-    const raw = 320 + (seed * 2) + Math.round(Math.sin(i + seed) * 40);
-    const wip = 210 + seed + Math.round(Math.cos(i * 1.3 + seed) * 30);
-    return { name, raw, wip };
-  }), [timeLabels, seed]);
-
-  const delayBreakdownData = useMemo(() => {
-    return [
-      { name: 'Order Entry', value: 15 + (seed % 5), color: '#FFAE6E' },
-      { name: 'Production', value: 35 - (seed % 3), color: '#EC6530' },
-      { name: 'Packaging', value: 20 + (seed % 4), color: '#8FDDDF' },
-      { name: 'Transit', value: 30 - (seed % 2), color: '#FFE3E3' },
-    ];
-  }, [seed]);
-
-  const weeklyProdDetails = useMemo(() => {
-    return timeLabels.map((name, i) => {
-      const seedVal = seed + i;
-      const pMachined = 100 + Math.round(Math.sin(seedVal) * 20);
-      const pAssembled = 120 + Math.round(Math.cos(seedVal) * 20);
-      const pFabricated = 80 + Math.round(Math.sin(seedVal * 1.5) * 15);
-      
-      const aMachined = pMachined - 10 + Math.round(Math.cos(seedVal) * 15);
-      const aAssembled = pAssembled + (seedVal % 2 === 0 ? 10 : -15);
-      const aFabricated = pFabricated - 5 + Math.round(Math.sin(seedVal * 1.2) * 10);
-      
-      const eff1 = Math.min(100, Math.max(70, 85 + Math.round(Math.sin(seedVal) * 10)));
-      const eff2 = Math.min(100, Math.max(70, 88 + Math.round(Math.cos(seedVal * 1.3) * 8)));
-      
-      return {
-        name,
-        pMachined, pAssembled, pFabricated,
-        aMachined, aAssembled, aFabricated,
-        eff1, eff2
-      };
-    });
-  }, [timeLabels, seed]);
+  const otifSummaryData = q1Otif.otifSummaryData || [];
+  const dispatchAdherenceData = q1Otif.dispatchAdherenceData || [];
+  const productionPlanActualData = q1Otif.productionPlanActualData || [];
+  const materialReadinessData = q1Otif.materialReadinessData || [];
+  const delayBreakdownData = q1Otif.delayBreakdownData || DELAY_BREAKDOWN;
+  const weeklyProdDetails = q1Otif.weeklyProdDetails || [];
 
   const chart1Data = useMemo(() => {
     if (filters.trend === 'year' || filters.trend === 'quarter') {
@@ -527,7 +513,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
             />
 
             <div className="flex items-center gap-6 my-auto">
-              <ConcentricRadialRing />
+              <ConcentricRadialRing otifValue={q1Otif.otifVal} />
               <div className="flex-grow flex flex-col gap-2.5">
                 {[
                   { label: 'Scheduled', value: '100%', target: '100%', color: '#FFE3E3' },
@@ -587,13 +573,92 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
 
             <div className="flex-grow" style={{ minHeight: '160px', padding: '24px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dispatchAdherenceData} layout="vertical" barCategoryGap="25%" margin={{ top: 15, right: 15, left: -15, bottom: 5 }}>
+                <BarChart data={dispatchAdherenceData} layout="vertical" barCategoryGap="20%" margin={{ top: 15, right: 15, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={T.tt} />
-                  <Bar dataKey="onTime" name="On-Time" stackId="a" fill="#EC6530" maxBarSize={22} />
-                  <Bar dataKey="delayed" name="Delayed" stackId="a" fill="#FFAE6E" radius={[0, 2, 2, 0]} maxBarSize={22} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar
+                    dataKey="onTime"
+                    name="On-Time"
+                    stackId="a"
+                    fill="url(#gSeries1)"
+                    isAnimationActive={true}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                    maxBarSize={20}
+                  >
+                    {dispatchAdherenceData.map((entry: any, index: number) => {
+                      const isActive = hoveredBar?.chartId === 'dispatch_adherence' && hoveredBar?.index === index;
+                      const isAnyActive = hoveredBar?.chartId === 'dispatch_adherence';
+                      const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                      return (
+                        <Cell
+                          key={`cell-ontime-${index}`}
+                          fill="url(#gSeries1)"
+                          opacity={opacity}
+                          onMouseEnter={() => setHoveredBar({ chartId: 'dispatch_adherence', index })}
+                          onMouseLeave={() => setHoveredBar(null)}
+                          style={{
+                            transform: isActive ? 'scaleX(1.05)' : 'scaleX(1)',
+                            transformOrigin: 'left center',
+                            filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      );
+                    })}
+                    <LabelList
+                      dataKey="onTime"
+                      position="right"
+                      formatter={(v: number) => v > 0 ? `${Math.round(v)}%` : ''}
+                      fontSize={8}
+                      fontWeight={700}
+                      fill="#475569"
+                    />
+                  </Bar>
+                  <Bar
+                    dataKey="delayed"
+                    name="Delayed"
+                    stackId="a"
+                    fill="url(#gSeries2)"
+                    isAnimationActive={true}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                    radius={[0, 4, 4, 0]}
+                    maxBarSize={20}
+                  >
+                    {dispatchAdherenceData.map((entry: any, index: number) => {
+                      const isActive = hoveredBar?.chartId === 'dispatch_adherence' && hoveredBar?.index === index;
+                      const isAnyActive = hoveredBar?.chartId === 'dispatch_adherence';
+                      const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                      return (
+                        <Cell
+                          key={`cell-delayed-${index}`}
+                          fill="url(#gSeries2)"
+                          opacity={opacity}
+                          onMouseEnter={() => setHoveredBar({ chartId: 'dispatch_adherence', index })}
+                          onMouseLeave={() => setHoveredBar(null)}
+                          style={{
+                            transform: isActive ? 'scaleX(1.05)' : 'scaleX(1)',
+                            transformOrigin: 'left center',
+                            filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      );
+                    })}
+                    <LabelList
+                      dataKey="delayed"
+                      position="right"
+                      formatter={(v: number) => v > 0 ? `${Math.round(v)}%` : ''}
+                      fontSize={8}
+                      fontWeight={700}
+                      fill="#475569"
+                    />
+                  </Bar>
                   <Legend {...commonLegendProps} />
                 </BarChart>
               </ResponsiveContainer>
@@ -630,15 +695,95 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
 
             <div className="flex-grow" style={{ minHeight: '160px', padding: '24px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={productionPlanActualData} barCategoryGap="25%" margin={{ top: 15, right: 5, left: -15, bottom: 5 }}>
+                <ComposedChart data={productionPlanActualData} barCategoryGap="20%" margin={{ top: 15, right: 5, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <YAxis yAxisId="left" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} domain={[50, 100]} />
-                  <Tooltip contentStyle={T.tt} />
+                  <Tooltip content={<CustomTooltip />} />
                   <ReferenceLine yAxisId="right" y={95} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Target SLA', position: 'insideTopRight', fill: '#EF4444', fontSize: 8 }} />
-                  <Bar yAxisId="left" dataKey="plan" name="Planned Output" fill="#CBD5E1" radius={[2, 2, 0, 0]} maxBarSize={22} fillOpacity={0.6} />
-                  <Bar yAxisId="left" dataKey="actual" name="Actual Output" fill="#EC6530" radius={[2, 2, 0, 0]} maxBarSize={22} />
+                  <Bar
+                    yAxisId="left"
+                    dataKey="plan"
+                    name="Planned Output"
+                    fill="url(#gPlannedGrey)"
+                    isAnimationActive={true}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={20}
+                  >
+                    {productionPlanActualData.map((entry: any, index: number) => {
+                      const isActive = hoveredBar?.chartId === 'production_adherence' && hoveredBar?.index === index;
+                      const isAnyActive = hoveredBar?.chartId === 'production_adherence';
+                      const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                      return (
+                        <Cell
+                          key={`cell-plan-${index}`}
+                          fill="url(#gPlannedGrey)"
+                          opacity={opacity}
+                          onMouseEnter={() => setHoveredBar({ chartId: 'production_adherence', index })}
+                          onMouseLeave={() => setHoveredBar(null)}
+                          style={{
+                            transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                            transformOrigin: 'bottom center',
+                            filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      );
+                    })}
+                    <LabelList
+                      dataKey="plan"
+                      position="top"
+                      formatter={(v: number) => Math.round(v).toLocaleString()}
+                      fontSize={8}
+                      fontWeight={700}
+                      fill="#475569"
+                    />
+                  </Bar>
+                  <Bar
+                    yAxisId="left"
+                    dataKey="actual"
+                    name="Actual Output"
+                    fill="url(#gSeries1)"
+                    isAnimationActive={true}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={20}
+                  >
+                    {productionPlanActualData.map((entry: any, index: number) => {
+                      const isActive = hoveredBar?.chartId === 'production_adherence' && hoveredBar?.index === index;
+                      const isAnyActive = hoveredBar?.chartId === 'production_adherence';
+                      const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                      return (
+                        <Cell
+                          key={`cell-actual-${index}`}
+                          fill="url(#gSeries1)"
+                          opacity={opacity}
+                          onMouseEnter={() => setHoveredBar({ chartId: 'production_adherence', index })}
+                          onMouseLeave={() => setHoveredBar(null)}
+                          style={{
+                            transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                            transformOrigin: 'bottom center',
+                            filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      );
+                    })}
+                    <LabelList
+                      dataKey="actual"
+                      position="top"
+                      formatter={(v: number) => Math.round(v).toLocaleString()}
+                      fontSize={8}
+                      fontWeight={700}
+                      fill="#475569"
+                    />
+                  </Bar>
                   <Line yAxisId="right" type="monotone" dataKey="adherence" name="Schedule Adherence %" stroke="#EC6530" strokeWidth={2} dot={{ r: 4, fill: '#EC6530', strokeWidth: 0 }} label={{ position: 'top', fill: '#EC6530', fontSize: 8, fontWeight: 600, formatter: (v) => `${v}%` }} />
                   <Legend {...commonLegendProps} />
                 </ComposedChart>
@@ -680,7 +825,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                   <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={T.tt} />
+                  <Tooltip content={<CustomTooltip />} />
                   <ReferenceLine y={500} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Safety Corridor', position: 'insideTopLeft', fill: '#EF4444', fontSize: 8 }} />
                   <Area type="monotone" dataKey="raw" name="Raw Material" stackId="1" stroke="#8FDDDF" fill="url(#gRawArea)" fillOpacity={1} />
                   <Area type="monotone" dataKey="wip" name="WIP Buffer" stackId="1" stroke="#FFAE6E" fill="url(#gWipArea)" fillOpacity={1} />
@@ -739,8 +884,85 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                     <div style={{ height: '60px' }} className="mt-3">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={dispatchAdherenceData} barCategoryGap="20%" margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
-                          <Bar dataKey="onTime" stackId="a" fill="#EC6530" maxBarSize={22} />
-                          <Bar dataKey="delayed" stackId="a" fill="#FFAE6E" radius={[1, 1, 0, 0]} maxBarSize={22} />
+                          <Bar
+                            dataKey="onTime"
+                            stackId="a"
+                            fill="url(#gSeries1)"
+                            isAnimationActive={true}
+                            animationDuration={1200}
+                            animationEasing="ease-out"
+                            maxBarSize={20}
+                          >
+                            {dispatchAdherenceData.map((entry: any, index: number) => {
+                              const isActive = hoveredBar?.chartId === 'mini_dispatch' && hoveredBar?.index === index;
+                              const isAnyActive = hoveredBar?.chartId === 'mini_dispatch';
+                              const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                              return (
+                                <Cell
+                                  key={`cell-mini-ontime-${index}`}
+                                  fill="url(#gSeries1)"
+                                  opacity={opacity}
+                                  onMouseEnter={() => setHoveredBar({ chartId: 'mini_dispatch', index })}
+                                  onMouseLeave={() => setHoveredBar(null)}
+                                  style={{
+                                    transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                    transformOrigin: 'bottom center',
+                                    filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                    transition: 'all 0.2s ease',
+                                    cursor: 'pointer'
+                                  }}
+                                />
+                              );
+                            })}
+                            <LabelList
+                              dataKey="onTime"
+                              position="top"
+                              formatter={(v: number) => v > 0 ? `${Math.round(v)}%` : ''}
+                              fontSize={7.5}
+                              fontWeight={700}
+                              fill="#475569"
+                            />
+                          </Bar>
+                          <Bar
+                            dataKey="delayed"
+                            stackId="a"
+                            fill="url(#gSeries2)"
+                            isAnimationActive={true}
+                            animationDuration={1200}
+                            animationEasing="ease-out"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={20}
+                          >
+                            {dispatchAdherenceData.map((entry: any, index: number) => {
+                              const isActive = hoveredBar?.chartId === 'mini_dispatch' && hoveredBar?.index === index;
+                              const isAnyActive = hoveredBar?.chartId === 'mini_dispatch';
+                              const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                              return (
+                                <Cell
+                                  key={`cell-mini-delayed-${index}`}
+                                  fill="url(#gSeries2)"
+                                  opacity={opacity}
+                                  onMouseEnter={() => setHoveredBar({ chartId: 'mini_dispatch', index })}
+                                  onMouseLeave={() => setHoveredBar(null)}
+                                  style={{
+                                    transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                    transformOrigin: 'bottom center',
+                                    filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                    transition: 'all 0.2s ease',
+                                    cursor: 'pointer'
+                                  }}
+                                />
+                              );
+                            })}
+                            <LabelList
+                              dataKey="delayed"
+                              position="top"
+                              formatter={(v: number) => v > 0 ? `${Math.round(v)}%` : ''}
+                              fontSize={7.5}
+                              fontWeight={700}
+                              fill="#475569"
+                            />
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -750,8 +972,84 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                     <div style={{ height: '60px' }} className="mt-3">
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={productionPlanActualData} barCategoryGap="20%" margin={{ top: 2, right: 2, left: 2, bottom: 2 }} barGap={2}>
-                          <Bar dataKey="plan" fill="#FFE3E3" radius={[1, 1, 0, 0]} maxBarSize={22} />
-                          <Bar dataKey="actual" fill="#EC6530" radius={[1, 1, 0, 0]} maxBarSize={22} />
+                          <Bar
+                            dataKey="plan"
+                            fill="url(#gSeries2)"
+                            isAnimationActive={true}
+                            animationDuration={1200}
+                            animationEasing="ease-out"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={20}
+                          >
+                            {productionPlanActualData.map((entry: any, index: number) => {
+                              const isActive = hoveredBar?.chartId === 'mini_production' && hoveredBar?.index === index;
+                              const isAnyActive = hoveredBar?.chartId === 'mini_production';
+                              const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                              return (
+                                <Cell
+                                  key={`cell-mini-plan-${index}`}
+                                  fill="url(#gSeries2)"
+                                  opacity={opacity}
+                                  onMouseEnter={() => setHoveredBar({ chartId: 'mini_production', index })}
+                                  onMouseLeave={() => setHoveredBar(null)}
+                                  style={{
+                                    transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                    transformOrigin: 'bottom center',
+                                    filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                    transition: 'all 0.2s ease',
+                                    cursor: 'pointer'
+                                  }}
+                                />
+                              );
+                            })}
+                            <LabelList
+                              dataKey="plan"
+                              position="top"
+                              formatter={(v: number) => Math.round(v).toLocaleString()}
+                              fontSize={7.5}
+                              fontWeight={700}
+                              fill="#475569"
+                            />
+                          </Bar>
+                          <Bar
+                            dataKey="actual"
+                            fill="url(#gSeries1)"
+                            isAnimationActive={true}
+                            animationDuration={1200}
+                            animationEasing="ease-out"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={20}
+                          >
+                            {productionPlanActualData.map((entry: any, index: number) => {
+                              const isActive = hoveredBar?.chartId === 'mini_production' && hoveredBar?.index === index;
+                              const isAnyActive = hoveredBar?.chartId === 'mini_production';
+                              const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                              return (
+                                <Cell
+                                  key={`cell-mini-actual-${index}`}
+                                  fill="url(#gSeries1)"
+                                  opacity={opacity}
+                                  onMouseEnter={() => setHoveredBar({ chartId: 'mini_production', index })}
+                                  onMouseLeave={() => setHoveredBar(null)}
+                                  style={{
+                                    transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                    transformOrigin: 'bottom center',
+                                    filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                    transition: 'all 0.2s ease',
+                                    cursor: 'pointer'
+                                  }}
+                                />
+                              );
+                            })}
+                            <LabelList
+                              dataKey="actual"
+                              position="top"
+                              formatter={(v: number) => Math.round(v).toLocaleString()}
+                              fontSize={7.5}
+                              fontWeight={700}
+                              fill="#475569"
+                            />
+                          </Bar>
                           <Line type="monotone" dataKey="adherence" stroke="#FFAE6E" strokeWidth={1} dot={false} />
                         </ComposedChart>
                       </ResponsiveContainer>
@@ -791,15 +1089,95 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                   </div>
                   <div style={{ height: '280px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={chart1Data} barCategoryGap="25%" margin={{ top: 15, right: 5, left: -15, bottom: 5 }}>
+                      <ComposedChart data={chart1Data} barCategoryGap="20%" margin={{ top: 15, right: 5, left: -15, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="left" label={{ value: 'Hours', angle: -90, position: 'insideLeft', offset: 10, fontSize: 8, fill: T.mutedColor }} tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="right" orientation="right" label={{ value: 'OTA %', angle: 90, position: 'insideRight', offset: 10, fontSize: 8, fill: T.mutedColor }} tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} domain={[50, 100]} />
-                        <Tooltip contentStyle={T.tt} />
+                        <Tooltip content={<CustomTooltip />} />
                         <ReferenceLine yAxisId="right" y={95} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'SLA Target: 95%', position: 'insideTopRight', fill: '#EF4444', fontSize: 8 }} />
-                        <Bar yAxisId="left" dataKey="plannedTransit" name="Planned Transit Time" fill="#FFE3E3" maxBarSize={30} radius={[4, 4, 0, 0]} />
-                        <Bar yAxisId="left" dataKey="actualTransit" name="Actual Transit Time" fill="#FFAE6E" maxBarSize={22} radius={[4, 4, 0, 0]} />
+                        <Bar
+                          yAxisId="left"
+                          dataKey="plannedTransit"
+                          name="Planned Transit Time"
+                          fill="url(#gSeries2)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={30}
+                        >
+                          {chart1Data.map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'transit_time' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'transit_time';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-planned-transit-${index}`}
+                                fill="url(#gSeries2)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'transit_time', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="plannedTransit"
+                            position="top"
+                            formatter={(v: number) => `${v}d`}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
+                        <Bar
+                          yAxisId="left"
+                          dataKey="actualTransit"
+                          name="Actual Transit Time"
+                          fill="url(#gSeries1)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={22}
+                        >
+                          {chart1Data.map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'transit_time' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'transit_time';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-actual-transit-${index}`}
+                                fill="url(#gSeries1)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'transit_time', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="actualTransit"
+                            position="top"
+                            formatter={(v: number) => `${v}d`}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
                         <Line yAxisId="right" type="monotone" dataKey="ota" name="OTA %" stroke="#EC6530" strokeWidth={2} dot={{ r: 4, fill: '#EC6530', strokeWidth: 0 }} label={{ position: 'top', fill: '#EC6530', fontSize: 8, fontWeight: 600, formatter: (v) => `${v}%` }} />
                         <Legend {...commonLegendProps} />
                       </ComposedChart>
@@ -833,7 +1211,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip contentStyle={T.tt} />
+                        <Tooltip content={<CustomTooltip />} />
                         <Legend {...commonLegendProps} />
                       </PieChart>
                     </ResponsiveContainer>
@@ -857,22 +1235,263 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                   </div>
                   <div style={{ height: '300px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={weeklyProdDetails} barCategoryGap="25%" margin={{ top: 10, right: 18, left: -22, bottom: 5 }} barGap={4}>
+                      <ComposedChart data={weeklyProdDetails} barCategoryGap="20%" margin={{ top: 10, right: 18, left: -22, bottom: 5 }} barGap={4}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="left" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} domain={[50, 100]} />
-                        <Tooltip contentStyle={T.tt} />
+                        <Tooltip content={<CustomTooltip />} />
                         
                         {/* Planned stack */}
-                        <Bar yAxisId="left" dataKey="pMachined" name="Planned Machined" stackId="plan" fill="#4988C4" maxBarSize={22} />
-                        <Bar yAxisId="left" dataKey="pAssembled" name="Planned Assembled" stackId="plan" fill="#FFAE6E" maxBarSize={22} />
-                        <Bar yAxisId="left" dataKey="pFabricated" name="Planned Fabricated" stackId="plan" fill="#FFE3E3" maxBarSize={22} />
+                        <Bar
+                          yAxisId="left"
+                          dataKey="pMachined"
+                          name="Planned Machined"
+                          stackId="plan"
+                          fill="url(#gPlannedBlue)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          maxBarSize={20}
+                        >
+                          {weeklyProdDetails.map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'weekly_prod' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'weekly_prod';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-pmachined-${index}`}
+                                fill="url(#gPlannedBlue)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'weekly_prod', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="pMachined"
+                            position="top"
+                            formatter={(v: number) => v > 0 ? Math.round(v).toLocaleString() : ''}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
+                        <Bar
+                          yAxisId="left"
+                          dataKey="pAssembled"
+                          name="Planned Assembled"
+                          stackId="plan"
+                          fill="url(#gSeries2)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          maxBarSize={20}
+                        >
+                          {weeklyProdDetails.map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'weekly_prod' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'weekly_prod';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-passembled-${index}`}
+                                fill="url(#gSeries2)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'weekly_prod', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="pAssembled"
+                            position="top"
+                            formatter={(v: number) => v > 0 ? Math.round(v).toLocaleString() : ''}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
+                        <Bar
+                          yAxisId="left"
+                          dataKey="pFabricated"
+                          name="Planned Fabricated"
+                          stackId="plan"
+                          fill="url(#gFabricated)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          maxBarSize={20}
+                        >
+                          {weeklyProdDetails.map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'weekly_prod' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'weekly_prod';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-pfabricated-${index}`}
+                                fill="url(#gFabricated)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'weekly_prod', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="pFabricated"
+                            position="top"
+                            formatter={(v: number) => v > 0 ? Math.round(v).toLocaleString() : ''}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
 
                         {/* Actual stack */}
-                        <Bar yAxisId="left" dataKey="aMachined" name="Actual Machined" stackId="actual" fill="url(#gSeries1)" maxBarSize={22} />
-                        <Bar yAxisId="left" dataKey="aAssembled" name="Actual Assembled" stackId="actual" fill="url(#gSeries2)" maxBarSize={22} />
-                        <Bar yAxisId="left" dataKey="aFabricated" name="Actual Fabricated" stackId="actual" fill="url(#gSeries3)" radius={[2, 2, 0, 0]} maxBarSize={22} />
+                        <Bar
+                          yAxisId="left"
+                          dataKey="aMachined"
+                          name="Actual Machined"
+                          stackId="actual"
+                          fill="url(#gSeries1)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          maxBarSize={20}
+                        >
+                          {weeklyProdDetails.map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'weekly_prod' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'weekly_prod';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-amachined-${index}`}
+                                fill="url(#gSeries1)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'weekly_prod', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="aMachined"
+                            position="top"
+                            formatter={(v: number) => v > 0 ? Math.round(v).toLocaleString() : ''}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
+                        <Bar
+                          yAxisId="left"
+                          dataKey="aAssembled"
+                          name="Actual Assembled"
+                          stackId="actual"
+                          fill="url(#gSeries2)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          maxBarSize={20}
+                        >
+                          {weeklyProdDetails.map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'weekly_prod' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'weekly_prod';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-aassembled-${index}`}
+                                fill="url(#gSeries2)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'weekly_prod', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="aAssembled"
+                            position="top"
+                            formatter={(v: number) => v > 0 ? Math.round(v).toLocaleString() : ''}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
+                        <Bar
+                          yAxisId="left"
+                          dataKey="aFabricated"
+                          name="Actual Fabricated"
+                          stackId="actual"
+                          fill="url(#gFabricated)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={20}
+                        >
+                          {weeklyProdDetails.map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'weekly_prod' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'weekly_prod';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-afabricated-${index}`}
+                                fill="url(#gFabricated)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'weekly_prod', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #F5788B)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="aFabricated"
+                            position="top"
+                            formatter={(v: number) => v > 0 ? Math.round(v).toLocaleString() : ''}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
 
                         {/* Efficiencies */}
                         <Line yAxisId="right" type="monotone" dataKey="eff1" name="Machining Efficiency %" stroke="#EC6530" strokeWidth={2} dot={{ r: 3 }} />
@@ -892,11 +1511,11 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                   </div>
                   <div style={{ height: '200px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={prodCategoryStack} barCategoryGap="25%" margin={{ top: 2, right: 8, left: -22, bottom: 5 }}>
+                      <BarChart data={prodCategoryStack} barCategoryGap="20%" margin={{ top: 2, right: 8, left: -22, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="week" tick={{ fontSize: 7, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 7, fill: T.mutedColor }} axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={T.tt} />
+                        <Tooltip content={<CustomTooltip />} />
                         <Bar dataKey="machined"   name="Machined"   stackId="cat" fill="#EC6530" maxBarSize={22} />
                         <Bar dataKey="assembled"  name="Assembled"  stackId="cat" fill="#FFAE6E" maxBarSize={22} />
                         <Bar dataKey="fabricated" name="Fabricated" stackId="cat" fill="#8FDDDF" radius={[2,2,0,0]} maxBarSize={22} />
@@ -927,7 +1546,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" />
                         <XAxis dataKey="station" name="Station" type="number" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                         <YAxis dataKey="wip"     name="WIP"     type="number" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
-                        <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={T.tt} />
+                        <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
                         <Scatter name="WIP Levels" data={wipStationScatter} fill="#8FDDDF" />
                         <ReferenceLine y={600} stroke="#EF4444" strokeDasharray="4 2" strokeWidth={1.5}
                           label={{ value: 'Max Buffer Corridor', fill: '#EF4444', fontSize: 7, position: 'right' }} />

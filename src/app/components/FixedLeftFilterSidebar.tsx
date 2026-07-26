@@ -54,7 +54,7 @@ export function FixedLeftFilterSidebar({ filters, onChange }: SidebarProps) {
 
   const [opSections, setOpSections] = useState({
     premachining: filters.opSections?.premachining !== false,
-    machining: filters.opSections?.machining !== false,
+   
     postMachining: filters.opSections?.postMachining !== false,
   });
 
@@ -335,8 +335,8 @@ export function FixedLeftFilterSidebar({ filters, onChange }: SidebarProps) {
               {(Object.keys(opSections) as (keyof typeof opSections)[]).map(key => {
                 const labels: Record<keyof typeof opSections, string> = {
                   premachining: 'Premachining',
-                  machining: 'Machining',
-                  postMachining: 'Assembly',
+                  
+                  postMachining: 'Postmachining',
                 };
                 const checked = opSections[key];
                 return (

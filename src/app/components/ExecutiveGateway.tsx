@@ -4,7 +4,7 @@ import {
   FileText, Database, ShieldCheck, Calendar, ClipboardCheck, Cpu,
   Activity, Warehouse, TrendingDown, AlertOctagon, PackageCheck, GitCommit
 } from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, Cell, ReferenceLine, Tooltip } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, Cell, ReferenceLine, Tooltip, LabelList } from 'recharts';
 import type { PageId } from './Sidebar';
 import { cn } from './ui/utils';
 import shopFloorBg from '../../assets/11.png';
@@ -13,9 +13,6 @@ import { useFilter } from '../contexts/FilterContext';
 
 // 7-month YTD historical datasets with high natural variance (Jan to Jul)
 const oeeYtdData = [
-  { name: 'Jan', value: 71.2 },
-  { name: 'Feb', value: 78.5 },
-  { name: 'Mar', value: 64.1 },
   { name: 'Apr', value: 81.3 },
   { name: 'May', value: 73.8 },
   { name: 'Jun', value: 79.4 },
@@ -23,9 +20,6 @@ const oeeYtdData = [
 ];
 
 const inventoryYtdData = [
-  { name: 'Jan', value: 1280 },
-  { name: 'Feb', value: 990 },
-  { name: 'Mar', value: 1350 },
   { name: 'Apr', value: 1050 },
   { name: 'May', value: 1220 },
   { name: 'Jun', value: 1140 },
@@ -33,9 +27,6 @@ const inventoryYtdData = [
 ];
 
 const copqYtdData = [
-  { name: 'Jan', value: 1480000 },
-  { name: 'Feb', value: 4300000 },
-  { name: 'Mar', value: 2400000 },
   { name: 'Apr', value: 5290000 },
   { name: 'May', value: 2560000 },
   { name: 'Jun', value: 3880000 },
@@ -43,9 +34,6 @@ const copqYtdData = [
 ];
 
 const rawMaterialYtdData = [
-  { name: 'Jan', value: 3 },
-  { name: 'Feb', value: 0 },
-  { name: 'Mar', value: 5 },
   { name: 'Apr', value: 1 },
   { name: 'May', value: 4 },
   { name: 'Jun', value: 2 },
@@ -53,9 +41,6 @@ const rawMaterialYtdData = [
 ];
 
 const otifYtdData = [
-  { name: 'Jan', value: 91.5 },
-  { name: 'Feb', value: 95.8 },
-  { name: 'Mar', value: 89.2 },
   { name: 'Apr', value: 96.4 },
   { name: 'May', value: 93.1 },
   { name: 'Jun', value: 95.0 },
@@ -63,9 +48,6 @@ const otifYtdData = [
 ];
 
 const traceabilityYtdData = [
-  { name: 'Jan', value: 99.1 },
-  { name: 'Feb', value: 99.8 },
-  { name: 'Mar', value: 98.4 },
   { name: 'Apr', value: 100.0 },
   { name: 'May', value: 99.5 },
   { name: 'Jun', value: 99.9 },
@@ -111,6 +93,34 @@ interface ExecutiveGatewayProps {
 
 const MiniChartTooltip = ({ active, payload, label, unit }: any) => {
   if (active && payload && payload.length) {
+    const isSunday = label === '7' || label === '14' || label === '21' || label === '28';
+    if (isSunday) {
+      return (
+        <div
+          className="backdrop-blur-md shadow-lg animate-in fade-in zoom-in-95 duration-100"
+          style={{
+            background: 'rgba(15, 23, 42, 0.9)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '8px',
+            padding: '4px 8px',
+            pointerEvents: 'none',
+          }}
+        >
+          <p
+            style={{
+              fontSize: '8px',
+              color: '#E2E8F0',
+              fontWeight: 700,
+              margin: 0,
+              fontFamily: 'sans-serif',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Sunday | Factory Holiday (Plant Shutdown)
+          </p>
+        </div>
+      );
+    }
     const fullMonthMap: Record<string, string> = {
       'Jan': 'January', 'Feb': 'February', 'Mar': 'March', 'Apr': 'April',
       'May': 'May', 'Jun': 'June', 'Jul': 'July', 'Aug': 'August',
@@ -150,7 +160,7 @@ const MiniChartTooltip = ({ active, payload, label, unit }: any) => {
 };
 
 // ── COMPACT KPI CARD COMPONENT FOR ISOMETRIC VIEW OVERLAYS ───────────────────
-function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing, onChartNodeClick, isSpotlightActive }: {
+function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing, onChartNodeClick, isSpotlightActive, isSectionCard = false }: {
   card: any;
   isHovered: boolean;
   onHover: (hovered: boolean) => void;
@@ -159,46 +169,128 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
   isPulsing: boolean;
   onChartNodeClick?: (month: string) => void;
   isSpotlightActive?: boolean;
+  isSectionCard?: boolean;
 }) {
   const Icon = card.icon;
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const yTicks = card.id === 3
-    ? [0, 1000000, 2000000, 3000000, 4000000, 5000000, 6000000]
-    : (card.id === 2 ? [0, 500, 1000, 1500, 2000] : (card.id === 4 ? [0, 25, 50, 75, 100] : [0, 25, 50, 75, 100]));
-  const yDomain = card.id === 3
-    ? [0, 6000000]
-    : (card.id === 2 ? [0, 2000] : (card.id === 4 ? [0, 100] : [0, 100]));
+  const isSectionOee = card.id === 101 || card.id === 102;
+  const isSectionCopq = card.id === 103 || card.id === 104;
+
+  const yTicks = isSectionCopq
+    ? [0, 5, 10, 15, 20, 25, 30]
+    : (card.id === 3
+      ? [0, 1000000, 2000000, 3000000, 4000000, 5000000, 6000000]
+      : (card.id === 2 ? [0, 500, 1000, 1500, 2000] : (card.id === 4 ? [0, 25, 50, 75, 100] : [0, 25, 50, 75, 100])));
+  
+  const yDomain = isSectionCopq
+    ? [0, 30]
+    : (card.id === 3
+      ? [0, 6000000]
+      : (card.id === 2 ? [0, 2000] : (card.id === 4 ? [0, 100] : [0, 100])));
 
   const tickFormatter = (v: any) => {
-    if (card.id === 1 || card.id === 6 || card.id === 5) return `${v}%`;
+    if (isSectionCopq) return `₹${v} L`;
+    if (isSectionOee || card.id === 1 || card.id === 6 || card.id === 5) return `${v}%`;
     if (card.id === 3) return v === 0 ? '₹0' : `₹${v / 100000} L`;
     if (card.id === 2) return v.toLocaleString();
     if (card.id === 4) return `${v}%`;
     return v;
   };
 
-  const getAreaTarget = () => {
-    if (card.id === 1) return { y: 80, label: "Target 80%" };
-    if (card.id === 2) return { y: 1200, label: "Target Limit: 1,200 Units" };
-    if (card.id === 4) return { y: 12, label: "Target 12d" };
-    return { y: 0, label: "Target 0" };
+  const getCardCategory = (card: any) => {
+    if (card.id === 1 || card.title.toLowerCase().includes('oee') || card.classification.toLowerCase().includes('performance')) return 'oee';
+    if (card.id === 2 || card.title.toLowerCase().includes('inventory') || card.classification.toLowerCase().includes('wip')) return 'inventory';
+    if (card.id === 3 || card.title.toLowerCase().includes('copq') || card.classification.toLowerCase().includes('loss')) return 'copq';
+    if (card.id === 4 || card.title.toLowerCase().includes('bpr') || card.title.toLowerCase().includes('coverage') || card.classification.toLowerCase().includes('buffer') || card.classification.toLowerCase().includes('purchase')) return 'bpr';
+    if (card.id === 5 || card.title.toLowerCase().includes('otif') || card.classification.toLowerCase().includes('adherence') || card.classification.toLowerCase().includes('delivery')) return 'otif';
+    if (card.id === 6 || card.title.toLowerCase().includes('traceability') || card.title.toLowerCase().includes('serialization') || card.classification.toLowerCase().includes('scan') || card.classification.toLowerCase().includes('trace')) return 'traceability';
+    return 'other';
   };
-  const areaTarget = getAreaTarget();
 
-  const hoverGlow = card.id === 1
+  const category = getCardCategory(card);
+
+  const getGradientColors = (cat: string) => {
+    switch (cat) {
+      case 'oee':
+        return { start: '#2563EB', end: '#1D4ED8' };
+      case 'inventory':
+        return { start: '#10B981', end: '#059669' };
+      case 'copq':
+        return { start: '#7C3AED', end: '#6D28D9' };
+      case 'bpr':
+        return { start: '#0EA5E9', end: '#0284C7' };
+      case 'otif':
+        return { start: '#F5788B', end: '#FFAE6E' };
+      case 'traceability':
+        return { start: '#6366F1', end: '#818CF8' };
+      default:
+        return { start: card.color, end: card.lighterColor || card.color };
+    }
+  };
+
+  const gradColors = getGradientColors(category);
+
+  const getCardTarget = (cat: string) => {
+    if (cat === 'oee') return { y: 80, label: "Target 80%" };
+    if (cat === 'inventory') return { y: 1200, label: "Target Limit: 1,200 Units" };
+    if (cat === 'copq') {
+      const isSectionCopq = card.id === 103 || card.id === 104;
+      return { y: isSectionCopq ? 15 : 1500000, label: "Target ₹15L" };
+    }
+    if (cat === 'bpr') {
+      if (card.id === 4) return { y: 12, label: "Target 12d" };
+      return { y: 75, label: "Target 75%" };
+    }
+    if (cat === 'otif') return { y: 95, label: "Target 95%" };
+    if (cat === 'traceability') return { y: 100, label: "Target 100%" };
+    return null;
+  };
+
+  const target = getCardTarget(category);
+
+  const getTooltipUnit = (cat: string) => {
+    switch (cat) {
+      case 'oee': return "% OEE";
+      case 'inventory': return " Units";
+      case 'copq': return " L";
+      case 'bpr': return "% BPR";
+      case 'otif': return "% OTIF";
+      case 'traceability': return "%";
+      default: return "";
+    }
+  };
+
+  const tooltipUnit = getTooltipUnit(category);
+
+  const formatValue = (value: number) => {
+    if (category === 'copq') {
+      if (value >= 100000) {
+        return `₹${Math.round(value / 100000)}L`;
+      } else {
+        return `₹${value}L`;
+      }
+    }
+    if (category === 'inventory') {
+      return Math.round(value).toLocaleString();
+    }
+    return `${Math.round(value)}%`;
+  };
+
+  const hoverGlow = card.id === 1 || isSectionOee
     ? 'rgba(93, 28, 106, 0.25)'
     : card.id === 5
       ? 'rgba(245, 120, 139, 0.25)'
       : `rgba(${card.rgb}, 0.25)`;
 
-  const normalGlow = card.id === 1
+  const normalGlow = card.id === 1 || isSectionOee
     ? 'rgba(93, 28, 106, 0.15)'
     : card.id === 5
       ? 'rgba(245, 120, 139, 0.15)'
       : `rgba(${card.rgb}, 0.15)`;
 
   const isWarningActive = (() => {
+    if (card.id === 102 || card.id === 104) return true;
     if (card.id === 1) return liveData.oee < 70;
     if (card.id === 3) return liveData.copqLoss > 3500000;
     if (card.id === 4) return liveData.daysOfSupply < 12.0;
@@ -231,10 +323,11 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    gap: isHovered ? '8px' : '10px',
+    justifyContent: isHovered ? 'space-between' : undefined,
     width: isHovered ? '320px' : '270px',
-    height: isHovered ? '320px' : '110px',
-    padding: isHovered ? '12px 12px 20px 12px' : '10px',
+    height: isHovered ? '260px' : '110px',
+    padding: '12px',
+    paddingBottom: '12px',
   };
 
   return (
@@ -274,10 +367,6 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
               {card.title}
             </h3>
           </div>
-        </div>
-        {/* Trend Badge */}
-        <div className={cn("flex items-center justify-center px-2 py-0.5 rounded-full text-center shrink-0 border border-transparent", card.trendBadgeBgClass)}>
-          <span className="text-[7.5px] font-bold">{card.trendText}</span>
         </div>
       </div>
 
@@ -326,138 +415,80 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
       {/* Expanded Hovered State: Leading Indicator Box, Recharts Graph & Action Footer */}
       <div
         style={{
-          maxHeight: isHovered ? '240px' : '0px',
+          maxHeight: isHovered ? '200px' : '0px',
           opacity: isHovered ? 1 : 0,
           transition: 'all 0.3s ease-in-out',
           visibility: isHovered ? 'visible' : 'hidden',
         }}
-        className="flex flex-col gap-2 w-full mt-1 overflow-hidden"
+        className="flex flex-col justify-between flex-grow w-full mt-1 overflow-hidden"
       >
-        {/* Leading Indicator Inner Box */}
-        <div
-          className="border flex items-center gap-2 shrink-0 p-2"
-          style={{
-            borderRadius: '12px',
-            background: 'rgba(248, 250, 252, 0.8)',
-            borderColor: '#F1F5F9',
-            marginBottom: '4px'
-          }}
-        >
-          <div className={cn("flex items-center justify-center rounded-lg p-1 border border-white/20 shrink-0", card.leadingIconBgClass)} style={{ backgroundColor: card.trackWash }}>
-            {(() => {
-              const LIcon = card.leadingIcon;
-              return <LIcon className="w-4 h-4" style={{ color: card.color }} />;
-            })()}
-          </div>
-          <div className="min-w-0 flex-grow">
-            <p className="text-[10px] font-bold text-[#1E293B] truncate">{card.leadingValue}</p>
-            <p className="text-[8px] text-slate-500 truncate">{card.leadingLabel}</p>
-          </div>
-        </div>
-
         {/* The Recharts Graph */}
-        <div className="w-full h-24 overflow-hidden shrink-0">
-          {card.chartType === 'area' ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={card.chartData} margin={{ top: 10, right: 5, left: 16, bottom: 5 }}>
-                <defs>
-                  <linearGradient id={`areaGradHover-${card.id}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={card.color} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={card.color} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} dy={4} />
-                <YAxis tick={{ fontSize: 7, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} ticks={yTicks} domain={yDomain} tickFormatter={tickFormatter} width={25} />
-                <ReferenceLine y={areaTarget.y} stroke="#EF4444" strokeDasharray="3 3" label={{ value: areaTarget.label, fill: '#EF4444', fontSize: 7, fontWeight: 700 }} />
-                <Tooltip content={<MiniChartTooltip unit={card.id === 1 ? "% OEE" : "% OTIF"} />} cursor={false} />
-                <Area
-                  type="monotone"
+        <div className="w-full overflow-hidden shrink-0 flex-grow" style={{ minHeight: '160px', flex: 1 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={card.chartData} barCategoryGap="25%" margin={{ top: 10, right: 5, left: 16, bottom: 5 }}>
+              <defs>
+                <linearGradient id={`barGradHover-${card.id}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={gradColors.start} />
+                  <stop offset="100%" stopColor={gradColors.end} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} dy={4} />
+              <YAxis tick={{ fontSize: 7, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} ticks={yTicks} domain={yDomain} tickFormatter={tickFormatter} width={25} />
+              {target && (
+                <ReferenceLine y={target.y} stroke="#EF4444" strokeDasharray="3 3" label={{ value: target.label, fill: '#EF4444', fontSize: 7, fontWeight: 700 }} />
+              )}
+              <Tooltip content={<MiniChartTooltip unit={tooltipUnit} />} cursor={false} />
+              <Bar
+                dataKey="value"
+                radius={[3, 3, 0, 0]}
+                maxBarSize={isHovered ? 22 : 14}
+                isAnimationActive={true}
+                animationDuration={1200}
+                animationEasing="ease-out"
+                onClick={(data: any, index: number, e: any) => {
+                  const eventObj = e || (index && typeof index === 'object' && index) || data;
+                  if (eventObj && eventObj.stopPropagation) {
+                    eventObj.stopPropagation();
+                  }
+                  const clickedMonth = data?.name || data?.payload?.name || data?.activeLabel;
+                  if (clickedMonth && onChartNodeClick) {
+                    onChartNodeClick(clickedMonth);
+                  }
+                }}
+              >
+                {card.chartData.map((entry: any, index: number) => {
+                  const isActive = activeIndex === index;
+                  const isAnyActive = activeIndex !== null;
+                  const opacity = isAnyActive ? (isActive ? 1 : 0.6) : 1;
+                  return (
+                    <Cell
+                      key={`cell-hover-${index}`}
+                      fill={`url(#barGradHover-${card.id})`}
+                      opacity={opacity}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onMouseLeave={() => setActiveIndex(null)}
+                      style={{
+                        transform: isActive ? 'scaleY(1.06)' : 'scaleY(1)',
+                        transformOrigin: 'bottom center',
+                        filter: isActive ? `drop-shadow(0 0 6px ${gradColors.start})` : 'none',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  );
+                })}
+                <LabelList
                   dataKey="value"
-                  stroke={card.color}
-                  strokeWidth={1.5}
-                  fill={`url(#areaGradHover-${card.id})`}
-                  dot={{ r: 1.5, stroke: card.color, strokeWidth: 0.5, fill: '#ffffff' }}
-                  activeDot={{
-                    r: 4,
-                    stroke: card.color,
-                    strokeWidth: 1.5,
-                    fill: '#ffffff',
-                    style: {
-                      transform: 'scale(1.3)',
-                      transformOrigin: 'center',
-                      filter: `drop-shadow(0 0 6px ${card.color})`,
-                      transition: 'all 0.2s ease',
-                      cursor: 'pointer'
-                    },
-                    onClick: (e: any, payload: any) => {
-                      if (e && e.stopPropagation) e.stopPropagation();
-                      const clickedMonth = payload?.payload?.name || payload?.name || e?.payload?.name || e?.name;
-                      if (clickedMonth && onChartNodeClick) {
-                        onChartNodeClick(clickedMonth);
-                      }
-                    }
-                  }}
+                  position="top"
+                  formatter={formatValue}
+                  fontSize={7.5}
+                  fontWeight={700}
+                  fill="#475569"
                 />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={card.chartData} barCategoryGap="25%" margin={{ top: 10, right: 5, left: 16, bottom: 5 }}>
-                <defs>
-                  <linearGradient id={`barGradHover-${card.id}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={card.color} />
-                    <stop offset="100%" stopColor={card.lighterColor || card.color} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} dy={4} />
-                <YAxis tick={{ fontSize: 7, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} ticks={yTicks} domain={yDomain} tickFormatter={tickFormatter} width={25} />
-                <ReferenceLine y={card.id === 5 ? 95 : 1500000} stroke="#EF4444" strokeDasharray="3 3" label={{ value: `Target ${card.id === 5 ? '95%' : '₹15L'}`, fill: '#EF4444', fontSize: 7, fontWeight: 700 }} />
-                <Tooltip content={<MiniChartTooltip unit={card.id === 5 ? "% OTIF" : " L"} />} cursor={false} />
-                <Bar
-                  dataKey="value"
-                  radius={[2, 2, 0, 0]}
-                  maxBarSize={22}
-                  onMouseEnter={(data: any, state: any) => {
-                    if (state && typeof state.activeIndex === 'number') {
-                      setActiveIndex(state.activeIndex);
-                    }
-                  }}
-                  onMouseLeave={() => {
-                    setActiveIndex(null);
-                  }}
-                  onClick={(data: any, index: number, e: any) => {
-                    const eventObj = e || (index && typeof index === 'object' && index) || data;
-                    if (eventObj && eventObj.stopPropagation) {
-                      eventObj.stopPropagation();
-                    }
-                    const clickedMonth = data?.name || data?.payload?.name || data?.activeLabel;
-                    if (clickedMonth && onChartNodeClick) {
-                      onChartNodeClick(clickedMonth);
-                    }
-                  }}
-                >
-                  {card.chartData.map((entry: any, index: number) => {
-                    const isActive = activeIndex === index;
-                    return (
-                      <Cell
-                        key={`cell-hover-${index}`}
-                        fill={`url(#barGradHover-${card.id})`}
-                        style={{
-                          transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                          transformOrigin: 'bottom center',
-                          filter: isActive ? `drop-shadow(0 0 4px ${card.color})` : 'none',
-                          transition: 'all 0.2s ease',
-                          cursor: 'pointer'
-                        }}
-                      />
-                    );
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
         {/* Access Diagnostics Link */}
@@ -555,14 +586,14 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
 
   // Live fluctuating data state
   const [liveData, setLiveData] = useState({
-    oee: 75.0,
+    oee: 73.5,
     overduePms: 0.5,
     activeWipUnits: 1192,
     wipAge: 12.8,
     daysOfSupply: 12.0,
-    copqLoss: 3480000, // Starts below ₹35L budget
+    copqLoss: 3460000,
     qGate: 98.2,
-    otif: 93.9,
+    otif: 94.4,
     scheduleAdherence: 1.5,
     serialization: 100,
     unmappedComponents: 0.0,
@@ -572,7 +603,10 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
   const [hoveredCardId, setHoveredCardId] = useState<number | null>(null);
   const [gridHoveredBarIndex, setGridHoveredBarIndex] = useState<number | null>(null);
   const [gridHoveredCardId, setGridHoveredCardId] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'ISOMETRIC' | 'GRID' | 'RADAR'>('GRID');
+  const [viewMode, setViewMode] = useState<'ISOMETRIC' | 'RADAR'>('RADAR');
+  const [selectedRadarKpi, setSelectedRadarKpi] = useState<number>(1);
+  const [expandedSection, setExpandedSection] = useState<'premachining' | 'postmachining' | null>(null);
+  const [hoveredSection, setHoveredSection] = useState<'premachining' | 'postmachining' | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   const [activeSpotlightCardId, setActiveSpotlightCardId] = useState<number>(1);
@@ -606,6 +640,49 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
   const isOtifCritical = liveData.otif < 94.2;
   const isTraceabilityCritical = liveData.unmappedComponents > 0.0;
 
+  const getZoneGlowStyle = (zoneId: string) => {
+    if (viewMode === 'ISOMETRIC') {
+      let isRed = false;
+      if (selectedRadarKpi === 2) {
+        // Inventory Mode: Only Assembly (process) glows Red
+        isRed = (zoneId === 'process');
+      } else if (selectedRadarKpi === 3) {
+        // COPQ Mode: Only Quality Inspection glows Red
+        isRed = (zoneId === 'quality');
+      } else if (selectedRadarKpi === 4) {
+        // BPR Mode: Only Process & Assembly glows Red
+        isRed = (zoneId === 'process');
+      } else if (selectedRadarKpi === 5) {
+        // OTIF Mode: Only Shipping Docks glows Red
+        isRed = (zoneId === 'shipping');
+      } else if (selectedRadarKpi === 6) {
+        // Traceability Mode: Only Welding (material) glows Red
+        isRed = (zoneId === 'material');
+      } else {
+        // OEE Mode (1) / Default: Only Assembly (process) glows Red
+        isRed = (zoneId === 'process');
+      }
+
+      if (isRed) {
+        return { glow: 'rgba(239, 68, 68, 0.18)', stroke: '#EF4444', isCritical: true };
+      } else {
+        // Healthy zones: transparent, with light-yellow outline (handled at render time with low opacity)
+        return { glow: 'transparent', stroke: 'rgba(254, 240, 138, 0.45)', isCritical: false };
+      }
+    }
+
+    // Default Radar view exception glows
+    switch (zoneId) {
+      case 'production': return isOeeCritical ? { glow: 'rgba(99, 102, 241, 0.15)', stroke: '#6366F1', isCritical: true } : null;
+      case 'warehouse': return isInventoryCritical ? { glow: 'rgba(16, 185, 129, 0.15)', stroke: '#10B981', isCritical: true } : null;
+      case 'quality': return isCopqCritical ? { glow: 'rgba(239, 68, 68, 0.15)', stroke: '#EF4444', isCritical: true } : null;
+      case 'process': return isBprCritical ? { glow: 'rgba(249, 115, 22, 0.15)', stroke: '#F97316', isCritical: true } : null;
+      case 'shipping': return isOtifCritical ? { glow: 'rgba(245, 158, 11, 0.15)', stroke: '#F59E0B', isCritical: true } : null;
+      case 'material': return isTraceabilityCritical ? { glow: 'rgba(139, 92, 246, 0.15)', stroke: '#8B5CF6', isCritical: true } : null;
+      default: return null;
+    }
+  };
+
   // Monitor resize for responsiveness
   useEffect(() => {
     const handleResize = () => {
@@ -616,76 +693,435 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Update live fluctuations in real-time
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLiveData(prev => {
-        // Occasionally drop OEE below 70% to trigger Production Hall alarm
-        const oeeAnomaly = Math.random() > 0.85;
-        const nextOee = oeeAnomaly
-          ? Math.max(65.0, Math.min(69.8, prev.oee + (Math.random() - 0.5) * 2.0))
-          : Math.max(73.5, Math.min(78.2, prev.oee + (Math.random() - 0.5) * 0.4));
 
-        const nextOverduePms = Math.max(0.42, Math.min(0.58, prev.overduePms + (Math.random() - 0.5) * 0.03));
-        const nextActiveWipUnits = Math.max(1190, Math.min(1210, Math.round(prev.activeWipUnits + (Math.random() - 0.5) * 4)));
-        const nextWipAge = Math.max(12.5, Math.min(13.1, prev.wipAge + (Math.random() - 0.5) * 0.12));
-
-        // Let Days of Supply swing around 12.0 to trigger Assembly orange glow
-        const nextDaysOfSupply = Math.max(11.0, Math.min(13.2, prev.daysOfSupply + (Math.random() - 0.5) * 0.25));
-
-        // Fluctuate COPQ loss around budget (3,500,000) so it sometimes breaches
-        const nextCopqLoss = Math.max(3420000, Math.min(3580000, Math.round(prev.copqLoss + (Math.random() - 0.5) * 45000)));
-
-        const nextQGate = Math.max(97.8, Math.min(98.6, prev.qGate + (Math.random() - 0.5) * 0.1));
-        const nextOtif = Math.max(93.8, Math.min(94.6, prev.otif + (Math.random() - 0.5) * 0.1));
-        const nextScheduleAdherence = Math.max(1.2, Math.min(1.8, prev.scheduleAdherence + (Math.random() - 0.5) * 0.1));
-        const nextUnmapped = Math.random() > 0.9 ? (Math.random() > 0.6 ? 0.1 : 0.0) : 0.0;
-
-        return {
-          oee: nextOee,
-          overduePms: nextOverduePms,
-          activeWipUnits: nextActiveWipUnits,
-          wipAge: nextWipAge,
-          daysOfSupply: nextDaysOfSupply,
-          copqLoss: nextCopqLoss,
-          qGate: nextQGate,
-          otif: nextOtif,
-          scheduleAdherence: nextScheduleAdherence,
-          serialization: prev.serialization,
-          unmappedComponents: nextUnmapped,
-        };
-      });
-
-      const changedKeys = ['oee', 'activeWipUnits', 'daysOfSupply', 'copqLoss', 'otif'];
-      const randomKey = changedKeys[Math.floor(Math.random() * changedKeys.length)];
-      setPulseStates(prev => ({ ...prev, [randomKey]: true }));
-      setTimeout(() => {
-        setPulseStates(prev => ({ ...prev, [randomKey]: false }));
-      }, 800);
-
-    }, 1100);
-
-    return () => clearInterval(interval);
-  }, []);
 
   const chartDataWithLive = useMemo(() => {
     return {
-      oee: [...oeeYtdData.slice(0, 6), { name: 'Jul', value: liveData.oee }],
-      inventory: [...inventoryYtdData.slice(0, 6), { name: 'Jul', value: liveData.activeWipUnits }],
-      copq: [...copqYtdData.slice(0, 6), { name: 'Jul', value: liveData.copqLoss }],
+      oee: [...oeeYtdData.slice(0, 3), { name: 'Jul', value: liveData.oee }],
+      inventory: [...inventoryYtdData.slice(0, 3), { name: 'Jul', value: liveData.activeWipUnits }],
+      copq: [...copqYtdData.slice(0, 3), { name: 'Jul', value: liveData.copqLoss }],
       purchase: [
-        { name: 'Jan', critical: 15, warning: 30, safe: 70, overstock: 100, value: 75 },
-        { name: 'Feb', critical: 15, warning: 30, safe: 70, overstock: 100, value: 82 },
-        { name: 'Mar', critical: 15, warning: 30, safe: 70, overstock: 100, value: 55 },
         { name: 'Apr', critical: 15, warning: 30, safe: 70, overstock: 100, value: 48 },
         { name: 'May', critical: 15, warning: 30, safe: 70, overstock: 100, value: 64 },
         { name: 'Jun', critical: 15, warning: 30, safe: 70, overstock: 100, value: 72 },
         { name: 'Jul', critical: 15, warning: 30, safe: 70, overstock: 100, value: Math.round(liveData.daysOfSupply * 5.8) }
       ],
-      otif: [...otifYtdData.slice(0, 6), { name: 'Jul', value: liveData.otif }],
-      compliance: [...traceabilityYtdData.slice(0, 6), { name: 'Jul', value: liveData.serialization }],
+      otif: [...otifYtdData.slice(0, 3), { name: 'Jul', value: liveData.otif }],
+      compliance: [...traceabilityYtdData.slice(0, 3), { name: 'Jul', value: liveData.serialization }],
     };
   }, [liveData]);
+
+  const getCommandCardData = () => {
+    switch (selectedRadarKpi) {
+      case 2: // Inventory Pipeline
+        return {
+          title: "PLANT-WIDE INVENTORY FLOW",
+          rows: [
+            { label: "TOTAL WIP ON FLOOR", valText: "2,405 Units", pct: (2405 / 3000) * 100, color: "#10B981" },
+            { label: "PRE-MACHINING WIP", valText: "1,190 Units", pct: (1190 / 3000) * 100, color: "#0EA5E9" },
+            { label: "POST-MACHINING WIP", valText: "2,850 Units", pct: (2850 / 3000) * 100, color: "#EF4444" },
+          ]
+        };
+      case 3: // COPQ
+        return {
+          title: "PLANT-WIDE COPQ LOSS INDEX",
+          rows: [
+            { label: "TOTAL COPQ LOSS", valText: "₹34.6 L", pct: (34.6 / 50) * 100, color: "#7C3AED" },
+            { label: "PRE-MACHINING LOSS", valText: "₹12.2 L", pct: (12.2 / 50) * 100, color: "#0EA5E9" },
+            { label: "POST-MACHINING LOSS", valText: "₹22.4 L", pct: (22.4 / 50) * 100, color: "#EF4444" },
+          ]
+        };
+      case 4: // BPR
+        return {
+          title: "PLANT-WIDE BUFFER HEALTH INDEX",
+          rows: [
+            { label: "AVERAGE BPR INDEX", valText: "88.0%", pct: 88.0, color: "#F59E0B" },
+            { label: "PRE-MACHINING BUFFER", valText: "94.2%", pct: 94.2, color: "#10B981" },
+            { label: "POST-MACHINING BUFFER", valText: "62.0%", pct: 62.0, color: "#EF4444" },
+          ]
+        };
+      case 5: // OTIF
+        return {
+          title: "PLANT-WIDE OTIF DELIVERY INDEX",
+          rows: [
+            { label: "OVERALL OTIF", valText: "94.4%", pct: 94.4, color: "#F97316" },
+            { label: "PRE-MACHINING SCHEDULE", valText: "98.1%", pct: 98.1, color: "#10B981" },
+            { label: "POST-MACHINING DISPATCH", valText: "88.5%", pct: 88.5, color: "#EF4444" },
+          ]
+        };
+      case 6: // Traceability
+        return {
+          title: "DIGITAL THREAD SERIALIZATION",
+          rows: [
+            { label: "COMPLIANCE INDEX", valText: "99.4%", pct: 99.4, color: "#6366F1" },
+            { label: "PRE-MACHINING SCANS", valText: "100.0%", pct: 100.0, color: "#10B981" },
+            { label: "POST-MACHINING SCANS", valText: "78.2%", pct: 78.2, color: "#EF4444" },
+          ]
+        };
+      case 1:
+      default: // OEE
+        return {
+          title: "PLANT-WIDE OEE INDEX",
+          rows: [
+            { label: "OVERALL PLANT OEE", valText: "73.5%", pct: 73.5, color: "#3B82F6" },
+            { label: "PRE-MACHINING OEE", valText: "76.2%", pct: 76.2, color: "#0EA5E9" },
+            { label: "POST-MACHINING OEE", valText: "68.4%", pct: 68.4, color: "#EF4444" },
+          ]
+        };
+    }
+  };
+
+  const getSectionCards = () => {
+    if (selectedRadarKpi === 2) {
+      // Inventory
+      return [
+        {
+          id: 101,
+          title: 'Premachining Inventory',
+          hoverGlowClass: 'hover:border-emerald-300',
+          icon: Warehouse,
+          color: '#10B981',
+          lighterColor: '#059669',
+          trackWash: 'rgba(16, 185, 129, 0.08)',
+          rgb: '16, 185, 129',
+          classification: 'PREMACHINING WIP',
+          categoryPillClass: 'bg-emerald-50 text-[#10B981] border border-emerald-100',
+          retroValue: '1,190 Active Units',
+          retroLabel: 'WIP active inventory',
+          progressPercent: 59.5,
+          trendText: '▼ 2.1%',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46]',
+          leadingValue: 'Stable shop buffer',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 1220 },
+            { name: 'May', value: 1210 },
+            { name: 'Jun', value: 1195 },
+            { name: 'Jul', value: 1190 }
+          ],
+          redirectTarget: 'inventory' as PageId,
+        },
+        {
+          id: 102,
+          title: 'Post-Machining Inventory',
+          hoverGlowClass: 'hover:border-rose-300',
+          icon: Warehouse,
+          color: '#EF4444',
+          lighterColor: '#DC2626',
+          trackWash: 'rgba(239, 68, 68, 0.08)',
+          rgb: '239, 68, 68',
+          classification: 'POST-MACHINING WIP',
+          categoryPillClass: 'bg-red-50 text-[#EF4444] border border-red-100',
+          retroValue: '2,850 Active Units',
+          retroLabel: 'Critical WIP build-up (CL1 overrun)',
+          progressPercent: 95.0,
+          trendText: '▲ 15.4%',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B]',
+          leadingValue: 'CL1 station buffer overrun',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 1850 },
+            { name: 'May', value: 2100 },
+            { name: 'Jun', value: 2450 },
+            { name: 'Jul', value: 2850 }
+          ],
+          redirectTarget: 'inventory' as PageId,
+        }
+      ];
+    } else if (selectedRadarKpi === 3) {
+      // COPQ Selected
+      return [
+        {
+          id: 103,
+          title: 'Premachining COPQ',
+          hoverGlowClass: 'hover:border-emerald-300',
+          icon: TrendingDown,
+          color: '#10B981',
+          lighterColor: '#059669',
+          trackWash: 'rgba(16, 185, 129, 0.08)',
+          rgb: '16, 185, 129',
+          classification: 'PREMACHINING LOSS',
+          categoryPillClass: 'bg-emerald-50 text-[#10B981] border border-emerald-100',
+          retroValue: '₹12.2 L Loss',
+          retroLabel: 'Premachining COPQ Loss',
+          progressPercent: 35,
+          trendText: '▼ 5.4%',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46]',
+          leadingValue: 'Supplier scrap',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 14.5 },
+            { name: 'May', value: 13.2 },
+            { name: 'Jun', value: 12.8 },
+            { name: 'Jul', value: 12.2 }
+          ],
+          redirectTarget: 'copq' as PageId,
+        },
+        {
+          id: 104,
+          title: 'Post-Machining COPQ',
+          hoverGlowClass: 'hover:border-rose-300',
+          icon: TrendingDown,
+          color: '#EF4444',
+          lighterColor: '#DC2626',
+          trackWash: 'rgba(239, 68, 68, 0.08)',
+          rgb: '239, 68, 68',
+          classification: 'POST-MACHINING LOSS',
+          categoryPillClass: 'bg-red-50 text-[#EF4444] border border-red-100',
+          retroValue: '₹22.4 L Loss',
+          retroLabel: 'Post-Machining COPQ Loss',
+          progressPercent: 65,
+          trendText: '▲ 8.2%',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B]',
+          leadingValue: 'Weld leak rework at LW1',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 18.2 },
+            { name: 'May', value: 19.5 },
+            { name: 'Jun', value: 21.0 },
+            { name: 'Jul', value: 22.4 }
+          ],
+          redirectTarget: 'copq' as PageId,
+        }
+      ];
+    } else if (selectedRadarKpi === 4) {
+      // BPR
+      return [
+        {
+          id: 101,
+          title: 'Premachining BPR',
+          hoverGlowClass: 'hover:border-emerald-300',
+          icon: Activity,
+          color: '#10B981',
+          lighterColor: '#059669',
+          trackWash: 'rgba(16, 185, 129, 0.08)',
+          rgb: '16, 185, 129',
+          classification: 'PREMACHINING BUFFER',
+          categoryPillClass: 'bg-emerald-50 text-[#10B981] border border-emerald-100',
+          retroValue: '94.2% Penetration',
+          retroLabel: 'Buffer penetration',
+          progressPercent: 94.2,
+          trendText: '▲ 1.8%',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46]',
+          leadingValue: 'UC1, SF01 buffer',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 91.5 },
+            { name: 'May', value: 92.8 },
+            { name: 'Jun', value: 93.6 },
+            { name: 'Jul', value: 94.2 }
+          ],
+          redirectTarget: 'bpr' as PageId,
+        },
+        {
+          id: 102,
+          title: 'Post-Machining BPR',
+          hoverGlowClass: 'hover:border-rose-300',
+          icon: Activity,
+          color: '#EF4444',
+          lighterColor: '#DC2626',
+          trackWash: 'rgba(239, 68, 68, 0.08)',
+          rgb: '239, 68, 68',
+          classification: 'POST-MACHINING BUFFER',
+          categoryPillClass: 'bg-red-50 text-[#EF4444] border border-red-100',
+          retroValue: '62.0% Penetration',
+          retroLabel: 'Critical buffer shortage (LW1 bottleneck)',
+          progressPercent: 62.0,
+          trendText: '▼ 4.5%',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B]',
+          leadingValue: 'LW1 welder bottleneck',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 75.0 },
+            { name: 'May', value: 71.2 },
+            { name: 'Jun', value: 66.8 },
+            { name: 'Jul', value: 62.0 }
+          ],
+          redirectTarget: 'bpr' as PageId,
+        }
+      ];
+    } else if (selectedRadarKpi === 5) {
+      // OTIF
+      return [
+        {
+          id: 103,
+          title: 'Premachining Adherence',
+          hoverGlowClass: 'hover:border-emerald-300',
+          icon: ShieldAlert,
+          color: '#10B981',
+          lighterColor: '#059669',
+          trackWash: 'rgba(16, 185, 129, 0.08)',
+          rgb: '16, 185, 129',
+          classification: 'PREMACHINING ADHERENCE',
+          categoryPillClass: 'bg-emerald-50 text-[#10B981] border border-emerald-100',
+          retroValue: '98.1% Adherence',
+          retroLabel: 'Schedule adherence',
+          progressPercent: 98.1,
+          trendText: '▲ 0.9%',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46]',
+          leadingValue: 'Production runs',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 97.2 },
+            { name: 'May', value: 97.8 },
+            { name: 'Jun', value: 97.9 },
+            { name: 'Jul', value: 98.1 }
+          ],
+          redirectTarget: 'otif' as PageId,
+        },
+        {
+          id: 104,
+          title: 'Post-Machining OTIF',
+          hoverGlowClass: 'hover:border-rose-300',
+          icon: ShieldAlert,
+          color: '#EF4444',
+          lighterColor: '#DC2626',
+          trackWash: 'rgba(239, 68, 68, 0.08)',
+          rgb: '239, 68, 68',
+          classification: 'POST-MACHINING DELIVERY',
+          categoryPillClass: 'bg-red-50 text-[#EF4444] border border-red-100',
+          retroValue: '88.5% OTIF',
+          retroLabel: 'Critical OTIF loss (packing delays)',
+          progressPercent: 88.5,
+          trendText: '▼ 3.8%',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B]',
+          leadingValue: 'Packing queue delays',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 92.5 },
+            { name: 'May', value: 91.0 },
+            { name: 'Jun', value: 89.4 },
+            { name: 'Jul', value: 88.5 }
+          ],
+          redirectTarget: 'otif' as PageId,
+        }
+      ];
+    } else if (selectedRadarKpi === 6) {
+      // Traceability
+      return [
+        {
+          id: 103,
+          title: 'Premachining Serialization',
+          hoverGlowClass: 'hover:border-emerald-300',
+          icon: Database,
+          color: '#10B981',
+          lighterColor: '#059669',
+          trackWash: 'rgba(16, 185, 129, 0.08)',
+          rgb: '16, 185, 129',
+          classification: 'PREMACHINING SCANS',
+          categoryPillClass: 'bg-emerald-50 text-[#10B981] border border-emerald-100',
+          retroValue: '100% Serialization',
+          retroLabel: 'L1 serialization scan rate',
+          progressPercent: 100,
+          trendText: '—',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46]',
+          leadingValue: 'Zero barcode faults',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 100 },
+            { name: 'May', value: 100 },
+            { name: 'Jun', value: 100 },
+            { name: 'Jul', value: 100 }
+          ],
+          redirectTarget: 'overview' as PageId,
+        },
+        {
+          id: 104,
+          title: 'Post-Machining Scans',
+          hoverGlowClass: 'hover:border-rose-300',
+          icon: Database,
+          color: '#EF4444',
+          lighterColor: '#DC2626',
+          trackWash: 'rgba(239, 68, 68, 0.08)',
+          rgb: '239, 68, 68',
+          classification: 'POST-MACHINING SCANS',
+          categoryPillClass: 'bg-red-50 text-[#EF4444] border border-red-100',
+          retroValue: '78.2% First-Scan',
+          retroLabel: 'Critical scan failures (thermal damage)',
+          progressPercent: 78.2,
+          trendText: '▼ 11.2%',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B]',
+          leadingValue: 'Thermal barcode damage',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 94.2 },
+            { name: 'May', value: 89.5 },
+            { name: 'Jun', value: 83.1 },
+            { name: 'Jul', value: 78.2 }
+          ],
+          redirectTarget: 'overview' as PageId,
+        }
+      ];
+    } else {
+      // OEE Selected (1)
+      return [
+        {
+          id: 101,
+          title: 'Premachining OEE',
+          hoverGlowClass: 'hover:border-emerald-300',
+          icon: Activity,
+          color: '#10B981',
+          lighterColor: '#059669',
+          trackWash: 'rgba(16, 185, 129, 0.08)',
+          rgb: '16, 185, 129',
+          classification: 'PREMACHINING OEE',
+          categoryPillClass: 'bg-emerald-50 text-[#10B981] border border-emerald-100',
+          retroValue: '76.2% OEE',
+          retroLabel: 'Premachining average OEE',
+          progressPercent: 76.2,
+          trendText: '▲ 1.4%',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46]',
+          leadingValue: 'VMC1, SF01, alt',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 74.5 },
+            { name: 'May', value: 75.1 },
+            { name: 'Jun', value: 75.8 },
+            { name: 'Jul', value: 76.2 }
+          ],
+          redirectTarget: 'overview' as PageId,
+        },
+        {
+          id: 102,
+          title: 'Post-Machining OEE',
+          hoverGlowClass: 'hover:border-rose-300',
+          icon: Activity,
+          color: '#EF4444',
+          lighterColor: '#DC2626',
+          trackWash: 'rgba(239, 68, 68, 0.08)',
+          rgb: '239, 68, 68',
+          classification: 'POST-MACHINING OEE',
+          categoryPillClass: 'bg-red-50 text-[#EF4444] border border-red-100',
+          retroValue: '68.4% OEE',
+          retroLabel: 'Post-Machining average OEE',
+          progressPercent: 68.4,
+          trendText: '▼ 2.1%',
+          trendSub: 'vs target',
+          trendBadgeBgClass: 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B]',
+          leadingValue: 'PACK, EOL',
+          chartType: 'bar' as const,
+          chartData: [
+            { name: 'Apr', value: 72.8 },
+            { name: 'May', value: 71.0 },
+            { name: 'Jun', value: 69.5 },
+            { name: 'Jul', value: 68.4 }
+          ],
+          redirectTarget: 'overview' as PageId,
+        }
+      ];
+    }
+  };
 
   const cards = [
     {
@@ -710,7 +1146,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
       leadingLabel: 'Preventive maintenance backlog rate',
       leadingIcon: FileText,
       leadingIconBgClass: 'bg-blue-50/50 border-blue-100/50',
-      chartType: 'area' as const,
+      chartType: 'bar' as const,
       chartData: chartDataWithLive.oee,
       gradientStartColor: '#3B82F6',
       redirectTarget: 'overview' as PageId,
@@ -738,7 +1174,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
       leadingLabel: 'Inventory flow velocity',
       leadingIcon: Database,
       leadingIconBgClass: 'bg-emerald-50/50 border-emerald-100/50',
-      chartType: 'area' as const,
+      chartType: 'bar' as const,
       chartData: chartDataWithLive.inventory,
       gradientStartColor: '#34D399',
       redirectTarget: 'inventory' as PageId,
@@ -793,7 +1229,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
       leadingLabel: 'Current material buffer runway',
       leadingIcon: Calendar,
       leadingIconBgClass: 'bg-cyan-50/50 border-cyan-100/50',
-      chartType: 'area' as const,
+      chartType: 'bar' as const,
       chartData: chartDataWithLive.purchase,
       gradientStartColor: '#38BDF8',
       redirectTarget: 'bpr' as PageId,
@@ -848,7 +1284,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
       leadingLabel: 'Digital thread completion rate',
       leadingIcon: Cpu,
       leadingIconBgClass: 'bg-indigo-50/50 border-indigo-100/50',
-      chartType: 'area' as const,
+      chartType: 'bar' as const,
       chartData: chartDataWithLive.compliance,
       gradientStartColor: '#818CF8',
       redirectTarget: 'traceability' as PageId,
@@ -856,7 +1292,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
     },
   ];
 
-  const activeViewMode = isMobile ? 'GRID' : viewMode;
+  const activeViewMode = viewMode;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 relative overflow-x-hidden font-sans select-none flex flex-col justify-between">
@@ -887,28 +1323,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
         {/* View Mode Switcher Selector */}
         {!isMobile && (
           <div className="flex bg-slate-200/60 p-1 rounded-xl border border-slate-300/35 shrink-0 shadow-inner">
-            <button
-              onClick={() => setViewMode('ISOMETRIC')}
-              className={cn(
-                "px-4 py-1.5 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-200 cursor-pointer",
-                viewMode === 'ISOMETRIC'
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-800"
-              )}
-            >
-              Control Tower Floor Map
-            </button>
-            <button
-              onClick={() => setViewMode('GRID')}
-              className={cn(
-                "px-4 py-1.5 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-200 cursor-pointer",
-                viewMode === 'GRID'
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-800"
-              )}
-            >
-              Metrics Grid View
-            </button>
+            
             <button
               onClick={() => setViewMode('RADAR')}
               className={cn(
@@ -918,8 +1333,21 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                   : "text-slate-500 hover:text-slate-800"
               )}
             >
-              Lighthouse Radar View
+              Manufacturing Control Tower 
             </button>
+
+            <button
+              onClick={() => { setViewMode('ISOMETRIC'); setExpandedSection(null); }}
+              className={cn(
+                "px-4 py-1.5 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-200 cursor-pointer",
+                viewMode === 'ISOMETRIC'
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-800"
+              )}
+            >
+              Shop Floor Map
+            </button>
+
           </div>
         )}
 
@@ -928,7 +1356,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
             ATLAS Operational Control Tower
           </p>
           <h1 className="text-base font-black tracking-tight text-slate-900 uppercase">
-            Executive Gateway
+            Summary Page
           </h1>
         </div>
       </header>
@@ -945,17 +1373,13 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
             <h2 className="text-2xl font-medium tracking-[0.05em] text-slate-900 uppercase">
               {activeViewMode === 'ISOMETRIC'
                 ? 'Operational Control Tower Map'
-                : activeViewMode === 'RADAR'
-                  ? 'Lighthouse operational radar'
-                  : 'Shopfloor KPI Summary'}
+                : 'Manufacturing Control Tower'}
             </h2>
-            <p className="text-xs text-slate-500 mt-1 max-w-lg mx-auto">
+            {/* <p className="text-xs text-slate-500 mt-1 max-w-lg mx-auto">
               {activeViewMode === 'ISOMETRIC'
                 ? 'Interactive shop floor telemetry. Hover to trace connections, click to enter dedicated diagnostic portals.'
-                : activeViewMode === 'RADAR'
-                  ? 'Real-time telemetry projection rays spotlighting operational hazards and clear shipping corridors.'
-                  : 'Real-time plant metrics updating in live cycles. Click a card to enter diagnostic control centers.'}
-            </p>
+                : 'Real-time telemetry projection rays spotlighting operational hazards and clear shipping corridors.'}
+            </p> */}
           </div>
 
           {activeViewMode === 'ISOMETRIC' ? (
@@ -965,352 +1389,101 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
               style={{ backgroundImage: `url(${shopFloorBg})` }}
             >
               {/* Layer 1: Exception-Based Floor Zone Glows (Isometric Hotspots) */}
-              {/* Production Hall Zone (OEE below 70%) */}
-              <div
-                className={cn(
-                  "absolute inset-0 pointer-events-none transition-opacity duration-[1500ms] ease-in-out z-10",
-                  isOeeCritical ? "opacity-100" : "opacity-0"
-                )}
-              >
-                <div
-                  className="w-full h-full animate-[pulse_3s_ease-in-out_infinite]"
-                  style={{
-                    clipPath: productionClipPath,
-                    background: 'rgba(99, 102, 241, 0.15)',
-                  }}
-                />
-                <svg className="absolute inset-0 w-full h-full animate-[pulse_3s_ease-in-out_infinite]" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  {/* Glow underlay */}
-                  <polygon
-                    points={productionSvgPoints}
-                    fill="none"
-                    stroke="#6366F1"
-                    strokeWidth="0.6"
-                    opacity="0.6"
-                    style={{ filter: 'blur(2px)' }}
-                  />
-                  {/* Sharp 2px border */}
-                  <polygon
-                    points={productionSvgPoints}
-                    fill="none"
-                    stroke="#6366F1"
-                    strokeWidth="0.2"
-                  />
-                </svg>
-              </div>
-
-              {/* Warehouse Zone (Inventory Alert) */}
-              <div
-                className={cn(
-                  "absolute inset-0 pointer-events-none transition-opacity duration-[1500ms] ease-in-out z-10",
-                  isInventoryCritical ? "opacity-100" : "opacity-0"
-                )}
-              >
-                <div
-                  className="w-full h-full animate-[pulse_3s_ease-in-out_infinite]"
-                  style={{
-                    clipPath: warehouseClipPath,
-                    background: 'rgba(16, 185, 129, 0.15)',
-                  }}
-                />
-                <svg className="absolute inset-0 w-full h-full animate-[pulse_3s_ease-in-out_infinite]" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  {/* Glow underlay */}
-                  <polygon
-                    points={warehouseSvgPoints}
-                    fill="none"
-                    stroke="#10B981"
-                    strokeWidth="0.6"
-                    opacity="0.6"
-                    style={{ filter: 'blur(2px)' }}
-                  />
-                  {/* Sharp 2px border */}
-                  <polygon
-                    points={warehouseSvgPoints}
-                    fill="none"
-                    stroke="#10B981"
-                    strokeWidth="0.2"
-                  />
-                </svg>
-              </div>
-
-              {/* Quality Inspection Zone (COPQ over budget) */}
-              <div
-                className={cn(
-                  "absolute inset-0 pointer-events-none transition-opacity duration-[1500ms] ease-in-out z-10",
-                  isCopqCritical ? "opacity-100" : "opacity-0"
-                )}
-              >
-                <div
-                  className="w-full h-full animate-[pulse_3s_ease-in-out_infinite]"
-                  style={{
-                    clipPath: qualityClipPath,
-                    background: 'rgba(239, 68, 68, 0.15)',
-                  }}
-                />
-                <svg className="absolute inset-0 w-full h-full animate-[pulse_3s_ease-in-out_infinite]" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  {/* Glow underlay */}
-                  <polygon
-                    points={qualitySvgPoints}
-                    fill="none"
-                    stroke="#EF4444"
-                    strokeWidth="0.6"
-                    opacity="0.6"
-                    style={{ filter: 'blur(2px)' }}
-                  />
-                  {/* Sharp 2px border */}
-                  <polygon
-                    points={qualitySvgPoints}
-                    fill="none"
-                    stroke="#EF4444"
-                    strokeWidth="0.2"
-                  />
-                </svg>
-              </div>
-
-              {/* Process & Assembly Zone (BPR Critical / starved) */}
-              <div
-                className={cn(
-                  "absolute inset-0 pointer-events-none transition-opacity duration-[1500ms] ease-in-out z-10",
-                  isBprCritical ? "opacity-100" : "opacity-0"
-                )}
-              >
-                <div
-                  className="w-full h-full animate-[pulse_3s_ease-in-out_infinite]"
-                  style={{
-                    clipPath: processClipPath,
-                    background: 'rgba(249, 115, 22, 0.15)',
-                  }}
-                />
-                <svg className="absolute inset-0 w-full h-full animate-[pulse_3s_ease-in-out_infinite]" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  {/* Glow underlay */}
-                  <polygon
-                    points={processSvgPoints}
-                    fill="none"
-                    stroke="#F97316"
-                    strokeWidth="0.6"
-                    opacity="0.6"
-                    style={{ filter: 'blur(2px)' }}
-                  />
-                  {/* Sharp 2px border */}
-                  <polygon
-                    points={processSvgPoints}
-                    fill="none"
-                    stroke="#F97316"
-                    strokeWidth="0.2"
-                  />
-                </svg>
-              </div>
-
-              {/* Shipping & Logistics Zone (OTIF Alert) */}
-              <div
-                className={cn(
-                  "absolute inset-0 pointer-events-none transition-opacity duration-[1500ms] ease-in-out z-10",
-                  isOtifCritical ? "opacity-100" : "opacity-0"
-                )}
-              >
-                <div
-                  className="w-full h-full animate-[pulse_3s_ease-in-out_infinite]"
-                  style={{
-                    clipPath: shippingClipPath,
-                    background: 'rgba(245, 158, 11, 0.15)',
-                  }}
-                />
-                <svg className="absolute inset-0 w-full h-full animate-[pulse_3s_ease-in-out_infinite]" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  {/* Glow underlay */}
-                  <polygon
-                    points={shippingSvgPoints}
-                    fill="none"
-                    stroke="#F59E0B"
-                    strokeWidth="0.6"
-                    opacity="0.6"
-                    style={{ filter: 'blur(2px)' }}
-                  />
-                  {/* Sharp 2px border */}
-                  <polygon
-                    points={shippingSvgPoints}
-                    fill="none"
-                    stroke="#F59E0B"
-                    strokeWidth="0.2"
-                  />
-                </svg>
-              </div>
-
-              {/* Material Flow Zone (Traceability Alert) */}
-              <div
-                className={cn(
-                  "absolute inset-0 pointer-events-none transition-opacity duration-[1500ms] ease-in-out z-10",
-                  isTraceabilityCritical ? "opacity-100" : "opacity-0"
-                )}
-              >
-                <div
-                  className="w-full h-full animate-[pulse_3s_ease-in-out_infinite]"
-                  style={{
-                    clipPath: materialClipPath,
-                    background: 'rgba(139, 92, 246, 0.15)',
-                  }}
-                />
-                <svg className="absolute inset-0 w-full h-full animate-[pulse_3s_ease-in-out_infinite]" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  {/* Glow underlay */}
-                  <polygon
-                    points={materialSvgPoints}
-                    fill="none"
-                    stroke="#8B5CF6"
-                    strokeWidth="0.6"
-                    opacity="0.6"
-                    style={{ filter: 'blur(2px)' }}
-                  />
-                  {/* Sharp 2px border */}
-                  <polygon
-                    points={materialSvgPoints}
-                    fill="none"
-                    stroke="#8B5CF6"
-                    strokeWidth="0.2"
-                  />
-                </svg>
-              </div>
-
-              {/* Layer 2: Pulsing Floor Hotspots */}
-              {cards.map((c) => {
-                const isHovered = hoveredCardId === c.id;
-                const coord = dynamicRadarCoords[c.id];
-                return (
-                  <div
-                    key={`radar-${c.id}`}
-                    style={{
-                      position: 'absolute',
-                      top: `${coord.top}%`,
-                      left: `${coord.left}%`,
-                      transform: 'translate(-50%, -50%)',
-                      cursor: 'pointer',
-                      zIndex: 35,
-                    }}
-                    onClick={() => onEnterDashboard(c.redirectTarget)}
-                    onMouseEnter={() => setHoveredCardId(c.id)}
-                    onMouseLeave={() => setHoveredCardId(null)}
-                    className="group"
-                  >
-                    <span
-                      className={cn(
-                        "absolute inline-flex h-8 w-8 rounded-full opacity-75 transition-all duration-300",
-                        isHovered ? "animate-[ping_0.7s_linear_infinite]" : "animate-[ping_2s_linear_infinite]"
-                      )}
-                      style={{ backgroundColor: c.color }}
-                    />
-                    <span
-                      className="relative inline-flex rounded-full h-4.5 w-4.5 border-2 border-white shadow-md flex items-center justify-center transition-transform duration-300 group-hover:scale-125"
-                      style={{ backgroundColor: c.color }}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                    </span>
-                  </div>
-                );
-              })}
-
-              {/* Layer 3: SVG Leader Lines with Drop-Shadow Neon Glow and pulsing critical zone borders */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none z-20" viewBox="0 0 100 100" preserveAspectRatio="none">
-                {/* Critical Floor Zone SVG Borders */}
-                {isOeeCritical && (
-                  <polygon
-                    points={productionSvgPoints}
-                    fill="none"
-                    stroke="#6366F1"
-                    strokeWidth="0.2"
-                    className="animate-pulse"
-                    style={{
-                      filter: 'drop-shadow(0 0 4px #6366F1)',
-                    }}
-                  />
-                )}
-                {isInventoryCritical && (
-                  <polygon
-                    points={warehouseSvgPoints}
-                    fill="none"
-                    stroke="#10B981"
-                    strokeWidth="0.2"
-                    className="animate-pulse"
-                    style={{
-                      filter: 'drop-shadow(0 0 4px #10B981)',
-                    }}
-                  />
-                )}
-                {isCopqCritical && (
-                  <polygon
-                    points={qualitySvgPoints}
-                    fill="none"
-                    stroke="#EF4444"
-                    strokeWidth="0.2"
-                    className="animate-pulse"
-                    style={{
-                      filter: 'drop-shadow(0 0 4px #EF4444)',
-                    }}
-                  />
-                )}
-                {isBprCritical && (
-                  <polygon
-                    points={processSvgPoints}
-                    fill="none"
-                    stroke="#F97316"
-                    strokeWidth="0.2"
-                    className="animate-pulse"
-                    style={{
-                      filter: 'drop-shadow(0 0 4px #F97316)',
-                    }}
-                  />
-                )}
-                {isOtifCritical && (
-                  <polygon
-                    points={shippingSvgPoints}
-                    fill="none"
-                    stroke="#F59E0B"
-                    strokeWidth="0.2"
-                    className="animate-pulse"
-                    style={{
-                      filter: 'drop-shadow(0 0 4px #F59E0B)',
-                    }}
-                  />
-                )}
-                {isTraceabilityCritical && (
-                  <polygon
-                    points={materialSvgPoints}
-                    fill="none"
-                    stroke="#8B5CF6"
-                    strokeWidth="0.2"
-                    className="animate-pulse"
-                    style={{
-                      filter: 'drop-shadow(0 0 4px #8B5CF6)',
-                    }}
-                  />
-                )}
-
-                {/* Connection lines */}
-                {cards.map((c) => {
-                  const isHighlighted = hoveredCardId === c.id;
-                  const start = cardAnchors[c.id];
-                  const end = dynamicRadarCoords[c.id];
+              {(() => {
+                const isPreActive = filters.opSections?.premachining !== false;
+                const isPostActive = filters.opSections?.postMachining !== false;
+                const floorZones = [
+                  { id: 'production', clipPath: productionClipPath, svgPoints: productionSvgPoints },
+                  { id: 'warehouse', clipPath: warehouseClipPath, svgPoints: warehouseSvgPoints },
+                  { id: 'quality', clipPath: qualityClipPath, svgPoints: qualitySvgPoints },
+                  { id: 'process', clipPath: processClipPath, svgPoints: processSvgPoints },
+                  { id: 'shipping', clipPath: shippingClipPath, svgPoints: shippingSvgPoints },
+                  { id: 'material', clipPath: materialClipPath, svgPoints: materialSvgPoints },
+                ];
+                return floorZones.map(zone => {
+                  const style = getZoneGlowStyle(zone.id);
+                  if (!style) return null;
+                  const isZoneActive = 
+                    zone.id === 'production' ? isPreActive :
+                    zone.id === 'process' ? isPostActive :
+                    true;
                   return (
-                    <g key={`leader-${c.id}`}>
-                      <path
-                        d={`M ${start.left} ${start.top} L ${end.left} ${end.top}`}
-                        stroke={c.color}
-                        strokeWidth={isHighlighted ? 1.5 : 0.6}
-                        strokeOpacity={isHighlighted ? 0.95 : 0.35}
-                        fill="none"
-                        strokeDasharray={isHighlighted ? "none" : "3 3"}
-                        className="transition-all duration-300"
+                    <div
+                      key={`zone-glow-${zone.id}`}
+                      className="absolute inset-0 pointer-events-none transition-opacity duration-[1000ms] ease-in-out z-10"
+                      style={{ opacity: isZoneActive ? 1.0 : 0.15 }}
+                    >
+                      <div
+                        className="w-full h-full animate-[pulse_3s_ease-in-out_infinite]"
                         style={{
-                          filter: isHighlighted ? `drop-shadow(0 0 4px ${c.color})` : 'none',
+                          clipPath: zone.clipPath,
+                          background: style.glow,
                         }}
                       />
-                      <circle
-                        cx={start.left}
-                        cy={start.top}
-                        r={isHighlighted ? 0.8 : 0.5}
-                        fill={c.color}
-                        className="transition-all duration-300"
-                      />
-                    </g>
+                      <svg className="absolute inset-0 w-full h-full animate-[pulse_3s_ease-in-out_infinite]" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        {/* Glow underlay */}
+                        <polygon
+                          points={zone.svgPoints}
+                          fill="none"
+                          stroke={style.stroke}
+                          strokeWidth="0.6"
+                          opacity={style.isCritical ? 0.6 : 0.05}
+                          style={{ filter: 'blur(2px)' }}
+                        />
+                        {/* Sharp 2px border */}
+                        <polygon
+                          points={zone.svgPoints}
+                          fill="none"
+                          stroke={style.stroke}
+                          strokeWidth="0.2"
+                          opacity={style.isCritical ? 1.0 : 0.05}
+                        />
+                      </svg>
+                    </div>
                   );
-                })}
+                });
+              })()}
+
+              {/* Layer 2: Pulsing Floor Hotspots (Omitted in Section-Level Analytics mode for visual clarity) */}
+
+              {/* Layer 3: SVG Leader Lines and Zone Borders */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none z-20" viewBox="0 0 100 100" preserveAspectRatio="none">
+                {/* Continuous or pulsing Floor Zone SVG Borders */}
+                {(() => {
+                  const isPreActive = filters.opSections?.premachining !== false;
+                  const isPostActive = filters.opSections?.postMachining !== false;
+                  const floorZones = [
+                    { id: 'production', svgPoints: productionSvgPoints },
+                    { id: 'warehouse', svgPoints: warehouseSvgPoints },
+                    { id: 'quality', svgPoints: qualitySvgPoints },
+                    { id: 'process', svgPoints: processSvgPoints },
+                    { id: 'shipping', svgPoints: shippingSvgPoints },
+                    { id: 'material', svgPoints: materialSvgPoints },
+                  ];
+                  return floorZones.map(zone => {
+                    const style = getZoneGlowStyle(zone.id);
+                    if (!style) return null;
+                    const isContinuous = viewMode === 'ISOMETRIC';
+                    const isZoneActive = 
+                      zone.id === 'production' ? isPreActive :
+                      zone.id === 'process' ? isPostActive :
+                      true;
+                    return (
+                      <polygon
+                        key={`zone-border-${zone.id}`}
+                        points={zone.svgPoints}
+                        fill="none"
+                        stroke={style.stroke}
+                        strokeWidth="0.2"
+                        className={isContinuous && !style.isCritical ? "" : "animate-pulse"}
+                        opacity={isZoneActive ? (style.isCritical ? 1.0 : 0.05) : 0.01}
+                        style={{
+                          filter: style.isCritical && isZoneActive ? `drop-shadow(0 0 4px ${style.stroke})` : 'none',
+                        }}
+                      />
+                    );
+                  });
+                })()}
               </svg>
 
               {/* Layer 4: General Plant-Wide Index command card */}
@@ -1321,91 +1494,113 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                   left: '2%',
                   width: '18%',
                   zIndex: 40,
-                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                  border: '1px solid rgba(226, 232, 240, 0.9)',
-                  background: 'rgba(255, 255, 255, 0.92)',
-                  backdropFilter: 'blur(8px)',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4)',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  background: 'rgba(15, 23, 42, 0.88)',
+                  backdropFilter: 'blur(16px)',
+                  borderRadius: '20px',
                 }}
-                className="rounded-2xl p-4 flex flex-col gap-3.5 select-none"
+                className="p-4 flex flex-col gap-3.5 select-none"
               >
-                <div className="border-b border-slate-100 pb-2">
-                  <span className="text-[7.5px] font-black tracking-widest text-blue-600 uppercase block mb-1">FACTORY GENERAL OVERVIEW</span>
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-tight">Plant-Wide Index</h3>
-                  <span className="text-[9px] text-slate-400 font-bold">Tata Toyo Radiator (Chakan)</span>
-                </div>
+                {(() => {
+                  const cmdData = getCommandCardData();
+                  return (
+                    <>
+                      <div className="border-b border-slate-800 pb-2">
+                        <span className="text-[8px] font-bold tracking-[0.1em] text-[#38BDF8] uppercase block mb-1">ATLAS CONTROL TOWER</span>
+                        <h3 className="text-[13px] font-black text-white uppercase tracking-tight">{cmdData.title}</h3>
+                        <span className="text-[9px] text-[#94A3B8] font-bold">Tata Toyo Radiator (Chakan)</span>
+                      </div>
 
-                <div className="flex flex-col gap-2.5">
-                  <div>
-                    <div className="flex justify-between items-baseline text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">
-                      <span>OVERALL PLANT OEE</span>
-                      <span className="text-slate-800 font-black">{liveData.oee.toFixed(1)}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
-                      <div className="h-full bg-blue-600 rounded-full" style={{ width: `${liveData.oee}%` }} />
-                    </div>
-                  </div>
+                      <div className="flex flex-col gap-2.5">
+                        {cmdData.rows.map((row, idx) => (
+                          <div key={`cmd-row-${idx}`}>
+                            <div className="flex justify-between items-baseline text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">
+                              <span>{row.label}</span>
+                              <span className="text-white font-black">{row.valText}</span>
+                            </div>
+                            <div className="relative w-full bg-slate-800/80 h-1 rounded-full mt-1.5">
+                              <div className="h-full rounded-full relative" style={{ width: `${Math.min(100, Math.max(0, row.pct))}%`, backgroundColor: row.color }}>
+                                <div 
+                                  className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full shadow-[0_0_8px_#38BDF8]" 
+                                  style={{ 
+                                    transform: 'translate(50%, -50%)', 
+                                    backgroundColor: row.color === '#EF4444' ? '#FCA5A5' : '#E0F2FE' 
+                                  }} 
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
 
-                  <div>
-                    <div className="flex justify-between items-baseline text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">
-                      <span>DELIVERY (OTIF)</span>
-                      <span className="text-slate-800 font-black">{liveData.otif.toFixed(1)}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
-                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${liveData.otif}%` }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-baseline text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">
-                      <span>COPQ LOSS RATIO</span>
-                      <span className="text-slate-800 font-black">₹{(liveData.copqLoss / 100000).toFixed(1)} L</span>
-                    </div>
-                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
-                      <div className="h-full bg-purple-600 rounded-full" style={{ width: '45%' }} />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-100 rounded-xl p-2 text-[8px] font-bold uppercase text-slate-500 tracking-wider flex justify-between items-center">
+                <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-2 text-[8px] font-bold uppercase text-slate-400 tracking-wider flex justify-between items-center">
                   <span>SYSTEM STATUS:</span>
-                  <span className="text-emerald-600 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[#38BDF8] flex items-center gap-1 font-black">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34D399]" />
                     ONLINE
                   </span>
                 </div>
               </div>
 
-              {/* Layer 4: Absolute-positioned KPI Cards */}
-              {cards.map((c) => {
-                const cardCoord = cardCoords[c.id];
-                const isHovered = hoveredCardId === c.id;
-                const isPulsing = pulseStates[c.pulseKey];
+              {/* Layer 4: Absolute-positioned Section-Level KPI Cards (Anchored over floor zones) */}
+              {getSectionCards().map((sc, scIdx) => {
+                const isPremachining = scIdx === 0;
+                const isCardExpanded = isPremachining 
+                  ? expandedSection === 'premachining'
+                  : expandedSection === 'postmachining';
+                const isCardHovered = isPremachining
+                  ? hoveredSection === 'premachining'
+                  : hoveredSection === 'postmachining';
+                const isCardActive = isCardExpanded || isCardHovered;
+                
+                // Anchored coordinates
+                // Premachining: top-left area. Post-machining: bottom-right / Assembly area
+                const cardCoord = isPremachining 
+                  ? { top: 25, left: 24 } 
+                  : { top: 52, left: 62 };
+
                 return (
                   <div
-                    key={`card-${c.id}`}
+                    key={`section-card-${sc.id}`}
                     style={{
                       position: 'absolute',
-                      top: isHovered ? `${cardCoord.top - 4}%` : `${cardCoord.top}%`,
-                      left: isHovered ? `calc(${cardCoord.left}% - 25px)` : `${cardCoord.left}%`,
-                      width: isHovered ? '320px' : '270px',
-                      zIndex: isHovered ? 50 : 40,
+                      top: isCardActive ? `${cardCoord.top - 4}%` : `${cardCoord.top}%`,
+                      left: isCardActive ? `calc(${cardCoord.left}% - 25px)` : `${cardCoord.left}%`,
+                      width: isCardActive ? '320px' : '270px',
+                      zIndex: isCardActive ? 50 : 40,
                       transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
                     }}
                   >
                     <CompactKPICard
-                      card={c}
-                      isHovered={isHovered}
-                      onHover={(hover) => setHoveredCardId(hover ? c.id : null)}
-                      onClick={() => onEnterDashboard(c.redirectTarget)}
+                      card={sc}
+                      isHovered={isCardActive}
+                      isSectionCard={true}
+                      onHover={(h) => {
+                        setHoveredSection(h ? (isPremachining ? 'premachining' : 'postmachining') : null);
+                      }}
+                      onClick={() => {
+                        const secName = isPremachining ? 'premachining' : 'postmachining';
+                        if (expandedSection === secName) {
+                          onEnterDashboard(sc.redirectTarget);
+                        } else {
+                          setExpandedSection(secName);
+                        }
+                      }}
                       liveData={liveData}
-                      isPulsing={isPulsing}
-                      onChartNodeClick={(monthName) => handleChartNodeClick(monthName, c.redirectTarget)}
+                      isPulsing={false}
+                      onChartNodeClick={(monthName) => {
+                        handleChartNodeClick(monthName, sc.redirectTarget);
+                      }}
                     />
                   </div>
                 );
               })}
             </div>
-          ) : activeViewMode === 'RADAR' ? (
+          ) : (
             /* ── L0 GATEWAY "LIGHTHOUSE RADAR" VIEW ── */
             <div
               style={{
@@ -1434,12 +1629,12 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
 
                 {(() => {
                   const radarCoords: Record<number, { x2: number, y2: number, points: string, isCritical: boolean }> = {
-                    1: { x2: 16, y2: 15, points: "50,43.5 8,19 22,8", isCritical: isOeeCritical }, // OEE
-                    3: { x2: 84, y2: 15, points: "50,43.5 78,8 92,19", isCritical: isCopqCritical }, // COPQ
-                    4: { x2: 15, y2: 50, points: "50,43.5 15,47 15,53", isCritical: isBprCritical }, // BPR
-                    5: { x2: 85, y2: 50, points: "50,43.5 85,47 85,53", isCritical: isOtifCritical }, // OTIF
-                    2: { x2: 16, y2: 78, points: "50,43.5 8,74 22,84", isCritical: isInventoryCritical }, // Inventory
-                    6: { x2: 84, y2: 78, points: "50,43.5 78,84 92,74", isCritical: isTraceabilityCritical }, // Traceability
+                    1: { x2: 18, y2: 22, points: "50,43.5 11,28 25,16", isCritical: isOeeCritical }, // OEE
+                    3: { x2: 82, y2: 22, points: "50,43.5 75,16 89,28", isCritical: isCopqCritical }, // COPQ
+                    4: { x2: 16, y2: 50, points: "50,43.5 16,47 16,53", isCritical: isBprCritical }, // BPR
+                    5: { x2: 84, y2: 50, points: "50,43.5 84,47 84,53", isCritical: isOtifCritical }, // OTIF
+                    2: { x2: 18, y2: 76, points: "50,43.5 11,71 25,81", isCritical: isInventoryCritical }, // Inventory
+                    6: { x2: 82, y2: 76, points: "50,43.5 75,81 89,71", isCritical: isTraceabilityCritical }, // Traceability
                   };
 
                   return Object.entries(radarCoords).map(([cardIdStr, coord]) => {
@@ -1501,12 +1696,12 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
               {/* Layer 5: Symmetrically distributed KPICards with Spotlight Scaling */}
               {(() => {
                 const radarCardCoords: Record<number, { top: string, left: string }> = {
-                  1: { top: '15%', left: '16%' },
-                  3: { top: '15%', left: '84%' },
-                  4: { top: '50%', left: '15%' },
-                  5: { top: '50%', left: '85%' },
-                  2: { top: '78%', left: '16%' },
-                  6: { top: '78%', left: '84%' },
+                  1: { top: '22%', left: '18%' },
+                  3: { top: '22%', left: '82%' },
+                  4: { top: '50%', left: '16%' },
+                  5: { top: '50%', left: '84%' },
+                  2: { top: '76%', left: '18%' },
+                  6: { top: '76%', left: '82%' },
                 };
 
                 return cards.map((c) => {
@@ -1534,10 +1729,18 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                         card={c}
                         isHovered={isHovered}
                         onHover={(hover) => setHoveredCardId(hover ? c.id : null)}
-                        onClick={() => onEnterDashboard(c.redirectTarget)}
+                        onClick={() => {
+                          setViewMode('ISOMETRIC');
+                          setSelectedRadarKpi(c.id);
+                          setExpandedSection(null);
+                        }}
                         liveData={liveData}
                         isPulsing={isPulsing}
-                        onChartNodeClick={(monthName) => handleChartNodeClick(monthName, c.redirectTarget)}
+                        onChartNodeClick={(monthName) => {
+                          setViewMode('ISOMETRIC');
+                          setSelectedRadarKpi(c.id);
+                          setExpandedSection(null);
+                        }}
                         isSpotlightActive={isSpotlightActive}
                       />
                     </div>
@@ -1545,326 +1748,8 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                 });
               })()}
             </div>
-          ) : (
-            /* ── STANDARD SYMMETRICAL GRID VIEW ── */
-            <div className="grid grid-cols-3 gap-5 animate-in fade-in duration-300">
-              {cards.map((card) => {
-                const Icon = card.icon;
-                const isPulsing = pulseStates[card.pulseKey];
-
-                const yTicks = card.id === 3 ? [0, 1000000, 2000000, 3000000, 4000000, 5000000, 6000000] : (card.id === 2 ? [0, 500, 1000, 1500, 2000] : (card.id === 4 ? [0, 25, 50, 75, 100] : [0, 25, 50, 75, 100]));
-                const yDomain = card.id === 3 ? [0, 6000000] : (card.id === 2 ? [0, 2000] : (card.id === 4 ? [0, 100] : [0, 100]));
-                const tickFormatter = (v: any) => {
-                  if (card.id === 1 || card.id === 6 || card.id === 5) return `${v}%`;
-                  if (card.id === 3) return v === 0 ? '₹0' : `₹${v / 100000} L`;
-                  if (card.id === 2) return v.toLocaleString();
-                  if (card.id === 4) return `${v}%`;
-                  return v;
-                };
-
-                const isHovered = hoveredCardId === card.id;
-
-                const isWarningActive = (() => {
-                  if (card.id === 1) return liveData.oee < 70;
-                  if (card.id === 3) return liveData.copqLoss > 3500000;
-                  if (card.id === 4) return liveData.daysOfSupply < 12.0;
-                  if (card.id === 5) return liveData.otif < 94.2;
-                  return false;
-                })();
-                const showWarningHighlight = isWarningActive && !isHovered;
-                const warningColor = card.id === 4 ? '#F97316' : '#EF4444';
-                const warningShadow = card.id === 4
-                  ? '0 15px 35px -5px rgba(249, 115, 22, 0.2), 0 0 15px 2px rgba(249, 115, 22, 0.15)'
-                  : '0 15px 35px -5px rgba(239, 68, 68, 0.2), 0 0 15px 2px rgba(239, 68, 68, 0.15)';
-
-                return (
-                  <div
-                    key={card.id}
-                    onClick={() => onEnterDashboard(card.redirectTarget)}
-                    onMouseEnter={() => setHoveredCardId(card.id)}
-                    onMouseLeave={() => setHoveredCardId(null)}
-                    className="group relative overflow-hidden rounded-2xl p-4 cursor-pointer shadow-md"
-                    style={{
-                      backdropFilter: 'blur(16px)',
-                      WebkitBackdropFilter: 'blur(16px)',
-                      boxShadow: showWarningHighlight
-                        ? warningShadow
-                        : (isHovered
-                          ? (card.id === 1
-                            ? '0 20px 25px -5px rgba(93, 28, 106, 0.25), 0 10px 10px -5px rgba(93, 28, 106, 0.15)'
-                            : (card.id === 5
-                              ? '0 20px 25px -5px rgba(245, 120, 139, 0.25), 0 10px 10px -5px rgba(245, 120, 139, 0.15)'
-                              : `0 20px 25px -5px rgba(${card.rgb}, 0.15), 0 10px 10px -5px rgba(${card.rgb}, 0.05)`))
-                          : '0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 4px 6px -4px rgba(15, 23, 42, 0.05)'),
-                      border: showWarningHighlight
-                        ? `2px solid ${warningColor}`
-                        : (isHovered
-                          ? (card.id === 1
-                            ? '1px solid rgba(93, 28, 106, 0.4)'
-                            : (card.id === 5
-                              ? '1px solid rgba(245, 120, 139, 0.4)'
-                              : `1px solid rgba(${card.rgb}, 0.4)`))
-                          : '1px solid rgba(226, 232, 240, 0.6)'),
-                      background: isHovered
-                        ? (card.id === 1
-                          ? 'radial-gradient(circle at center, rgba(93, 28, 106, 0.08) 0%, rgba(255,255,255,0.92) 85%)'
-                          : (card.id === 5
-                            ? 'radial-gradient(circle at center, rgba(245, 120, 139, 0.08) 0%, rgba(255,255,255,0.92) 85%)'
-                            : `radial-gradient(circle at center, rgba(${card.rgb}, 0.08) 0%, rgba(255,255,255,0.92) 85%)`))
-                        : 'rgba(255, 255, 255, 0.88)',
-                      transform: isHovered ? 'translateY(-4px)' : 'none',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    }}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className="relative w-10 h-10 shrink-0 flex items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-105 mr-3"
-                          style={{ backgroundColor: card.trackWash }}
-                        >
-                          <Icon className="w-5 h-5 relative z-10 transition-transform duration-200 group-hover:scale-110" style={{ color: card.color }} />
-                        </div>
-
-                        <div className="min-w-0">
-                          <span className={cn(
-                            "text-[7px] font-black tracking-widest px-1.5 py-0.5 rounded-full mb-1 inline-block uppercase leading-none",
-                            card.categoryPillClass
-                          )}>
-                            {card.classification}
-                          </span>
-                          <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
-                            {card.title}
-                          </h3>
-                          <div className="flex items-baseline gap-1 mt-0.5">
-                            <span
-                              style={{
-                                color: showWarningHighlight ? warningColor : undefined
-                              }}
-                              className={cn(
-                                "text-base font-black tracking-tight transition-all duration-300",
-                                isPulsing ? "scale-105 text-blue-600 animate-pulse" : (showWarningHighlight ? "" : "text-slate-900")
-                              )}
-                            >
-                              {card.retroValue.split(' ')[0]}
-                            </span>
-                            <span
-                              style={{
-                                color: showWarningHighlight ? warningColor : undefined
-                              }}
-                              className="text-[9px] font-bold text-slate-500"
-                            >
-                              {card.retroValue.split(' ').slice(1).join(' ')}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className={cn(
-                        "flex flex-col items-center justify-center px-1.5 py-1 rounded-lg text-center min-w-[64px] shrink-0",
-                        card.trendBadgeBgClass
-                      )}>
-                        <span className={cn("text-[9px] font-black flex items-center gap-0.5", card.trendTextClass)}>
-                          {card.trendText}
-                        </span>
-                        <span className="text-[7px] font-bold text-slate-500 leading-none mt-0.5">
-                          {card.trendSub}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="bg-[#F8FAFC]/80 border border-slate-100 rounded-xl p-2.5 flex items-center gap-2.5 shadow-inner">
-                      <div className={cn(
-                        "flex items-center justify-center rounded-lg p-1.5 border shrink-0",
-                        card.leadingIconBgClass
-                      )}>
-                        {(() => {
-                          const LeadingIcon = card.leadingIcon;
-                          return <LeadingIcon className="w-3.5 h-3.5" style={{ color: card.color }} />;
-                        })()}
-                      </div>
-                      <div className="min-w-0 flex-grow flex items-center gap-1.5 pt-0.5">
-                        <p className="text-[11px] font-black text-slate-800 leading-none">
-                          {card.leadingValue}
-                        </p>
-                        <span className="text-[10px] text-slate-300 leading-none font-light">|</span>
-                        <p className="text-[8px] text-slate-500 font-semibold leading-none">
-                          {card.leadingLabel}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="w-full h-24 mt-3.5">
-                      {card.chartType === 'area' ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart
-                            data={card.chartData}
-                            margin={{ top: 10, right: 5, left: 12, bottom: 0 }}
-                          >
-                            <defs>
-                              <linearGradient id={`areaGrad-${card.id}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={card.color} stopOpacity={0.35} />
-                                <stop offset="100%" stopColor={card.lighterColor || card.color} stopOpacity={0} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                            <XAxis
-                              dataKey="name"
-                              tick={{ fontSize: 8, fill: '#64748B', fontWeight: 600 }}
-                              axisLine={false}
-                              tickLine={{ stroke: '#CBD5E1', strokeWidth: 1 }}
-                              tickSize={3}
-                              dy={4}
-                            />
-                            <YAxis
-                              tick={{ fontSize: 8, fill: '#64748B', fontWeight: 600 }}
-                              axisLine={false}
-                              tickLine={false}
-                              ticks={yTicks}
-                              domain={yDomain}
-                              tickFormatter={tickFormatter}
-                              width={30}
-                            />
-                            {card.id === 1 && (
-                              <ReferenceLine y={80} stroke="#EF4444" strokeDasharray="3 3" />
-                            )}
-                            {(card.id === 1 || card.id === 5) && (
-                              <Tooltip content={<MiniChartTooltip unit={card.id === 1 ? "% OEE" : "% OTIF"} />} cursor={false} />
-                            )}
-                            {card.id === 4 ? (
-                              <>
-                                <Area type="step" dataKey="overstock" fill="url(#blueGradGrid)" fillOpacity={0.2} stroke="#3B82F6" strokeWidth={0} />
-                                <Area type="step" dataKey="safe" fill="url(#greenGradGrid)" fillOpacity={0.2} stroke="#10B981" strokeWidth={0} />
-                                <Area type="step" dataKey="warning" fill="url(#amberGradGrid)" fillOpacity={0.4} stroke="#F59E0B" strokeWidth={0} />
-                                <Area type="step" dataKey="critical" fill="url(#redGradGrid)" fillOpacity={0.5} stroke="#EF4444" strokeWidth={0} />
-                                <Area type="step" dataKey="value" stroke="#3B82F6" strokeWidth={1.5} fill="none" dot={{ r: 1.5, stroke: "#3B82F6", strokeWidth: 0.5, fill: "#ffffff" }} activeDot={{ r: 3, stroke: "#3B82F6", strokeWidth: 0.5, fill: "#3B82F6" }} />
-                              </>
-                            ) : (
-                              <Area
-                                type="monotone"
-                                dataKey="value"
-                                stroke={card.color}
-                                strokeWidth={1.75}
-                                fill={`url(#areaGrad-${card.id})`}
-                                dot={{ r: 1.5, stroke: card.color, strokeWidth: 0.75, fill: '#ffffff' }}
-                                activeDot={{
-                                  r: 3,
-                                  stroke: card.color,
-                                  strokeWidth: 1.5,
-                                  fill: card.color,
-                                  style: {
-                                    transform: 'scale(1.3)',
-                                    transformOrigin: 'center',
-                                    filter: `drop-shadow(0 0 6px ${card.color})`,
-                                    transition: 'all 0.2s ease',
-                                    cursor: 'pointer'
-                                  },
-                                  onClick: (e: any, payload: any) => {
-                                    if (e && e.stopPropagation) e.stopPropagation();
-                                    const clickedMonth = payload?.payload?.name || payload?.name || e?.payload?.name || e?.name;
-                                    if (clickedMonth && (card.id === 1 || card.id === 5)) {
-                                      handleChartNodeClick(clickedMonth, card.redirectTarget);
-                                    }
-                                  }
-                                }}
-                              />
-                            )}
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                            data={card.chartData}
-                            barCategoryGap="25%"
-                            margin={{ top: 10, right: 5, left: 12, bottom: 0 }}
-                          >
-                            <defs>
-                              <linearGradient id={`barGrad-${card.id}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={card.color} />
-                                <stop offset="100%" stopColor={card.lighterColor || card.color} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                            <XAxis
-                              dataKey="name"
-                              tick={{ fontSize: 8, fill: '#64748B', fontWeight: 600 }}
-                              axisLine={false}
-                              tickLine={{ stroke: '#CBD5E1', strokeWidth: 1 }}
-                              tickSize={3}
-                              dy={4}
-                            />
-                            <YAxis
-                              tick={{ fontSize: 8, fill: '#64748B', fontWeight: 600 }}
-                              axisLine={false}
-                              tickLine={false}
-                              ticks={yTicks}
-                              domain={yDomain}
-                              tickFormatter={tickFormatter}
-                              width={30}
-                            />
-                            {card.id === 5 && (
-                              <ReferenceLine y={95} stroke="#F59E0B" strokeDasharray="3 3" />
-                            )}
-                            {(card.id === 1 || card.id === 5) && (
-                              <Tooltip content={<MiniChartTooltip unit={card.id === 5 ? "% OTIF" : " L"} />} cursor={false} />
-                            )}
-                            <Bar
-                              dataKey="value"
-                              radius={[2, 2, 0, 0]}
-                              maxBarSize={22}
-                              onMouseEnter={(data: any, state: any) => {
-                                setGridHoveredCardId(card.id);
-                                if (state && typeof state.activeIndex === 'number') {
-                                  setGridHoveredBarIndex(state.activeIndex);
-                                }
-                              }}
-                              onMouseLeave={() => {
-                                setGridHoveredCardId(null);
-                                setGridHoveredBarIndex(null);
-                              }}
-                              onClick={(data: any, index: number, e: any) => {
-                                const eventObj = e || (index && typeof index === 'object' && index) || data;
-                                if (eventObj && eventObj.stopPropagation) {
-                                  eventObj.stopPropagation();
-                                }
-                                const clickedMonth = data?.name || data?.payload?.name || data?.activeLabel;
-                                if (clickedMonth && (card.id === 1 || card.id === 5)) {
-                                  handleChartNodeClick(clickedMonth, card.redirectTarget);
-                                }
-                              }}
-                            >
-                              {card.chartData.map((entry: any, index: number) => {
-                                const isActive = gridHoveredCardId === card.id && gridHoveredBarIndex === index;
-                                return (
-                                  <Cell
-                                    key={`cell-${index}`}
-                                    fill={`url(#barGrad-${card.id})`}
-                                    style={{
-                                      transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                                      transformOrigin: 'bottom center',
-                                      filter: isActive ? `drop-shadow(0 0 4px ${card.color})` : 'none',
-                                      transition: 'all 0.2s ease',
-                                      cursor: 'pointer'
-                                    }}
-                                  />
-                                );
-                              })}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      )}
-                    </div>
-
-                    <div className="mt-3 pt-2 border-t border-slate-100/70 flex items-center justify-end">
-                      <span className="text-[8px] font-extrabold tracking-widest uppercase text-slate-400 group-hover:text-slate-800 transition-colors duration-200 flex items-center gap-1">
-                        Access Diagnostics
-                        <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5 text-slate-400 group-hover:text-slate-800" />
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           )}
+
 
           {/* Quick Insights shortcut CTA */}
           <div className="mt-8 flex justify-center">
@@ -1888,3 +1773,4 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
     </div>
   );
 }
+

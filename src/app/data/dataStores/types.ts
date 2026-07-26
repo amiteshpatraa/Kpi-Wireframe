@@ -1,5 +1,5 @@
 export type PageId = 'OEE' | 'COPQ' | 'BPR' | 'OTIF' | 'INVENTORY' | 'TRACEABILITY';
-export type PeriodId = 'YTD' | 'YoY' | 'QTD' | 'MTD' | 'WTD';
+export type PeriodId = 'YTD' | 'QTD' | 'MTD' | 'WTD';
 export type ProductId = 'ALL' | 'MATRIX' | 'BANANA' | 'KIWI';
 
 export interface Coordinate {
@@ -9,7 +9,7 @@ export interface Coordinate {
 
 export const pages: PageId[] = ['OEE', 'COPQ', 'BPR', 'OTIF', 'INVENTORY', 'TRACEABILITY'];
 export const products: ProductId[] = ['ALL', 'MATRIX', 'BANANA', 'KIWI'];
-export const periods: PeriodId[] = ['YTD', 'YoY', 'QTD', 'MTD', 'WTD'];
+export const periods: PeriodId[] = ['YTD', 'QTD', 'MTD', 'WTD'];
 export const processes = [
   'ALL', 'VMC1', 'PACK', 'UC1', 'SF01', 'LW1', 'CL1', 'LW2', 'LW3', 'BRZ', 
   'SB10', 'RSHP', 'ALT10', 'OP10', 'OP20', 'SLGL', 'OP30', 'OP40', 'OP50', 'UC2', 'EOL'
@@ -25,9 +25,6 @@ export const T = {
 };
 
 export function getTimeLabels(period: PeriodId): string[] {
-  if (period === 'YoY') {
-    return Array.from({ length: 16 }, (_, i) => String(2011 + i));
-  }
   if (period === 'QTD') {
     return ['Apr', 'May', 'Jun', 'Jul'];
   }
@@ -37,5 +34,10 @@ export function getTimeLabels(period: PeriodId): string[] {
   if (period === 'WTD') {
     return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   }
-  return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+  return ['Apr', 'May', 'Jun', 'Jul'];
 }
+
+export function isSundayMtd(period: PeriodId, index: number): boolean {
+  return period === 'MTD' && (index === 6 || index === 13 || index === 20 || index === 27);
+}
+

@@ -12,8 +12,10 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Legend,
+  Cell,
+  LabelList,
 } from 'recharts';
-import { getDashboardData } from '../data/dashboardDataStore';
+import { getDashboardData } from '../data/dataStores';
 import { type FilterState } from './TimeTrendFilter';
 import {
   ArrowLeft,
@@ -27,6 +29,7 @@ import {
 } from 'lucide-react';
 import { CardLockHeader, lockedCardStyle } from './CardLockHeader';
 import { usePageCardLocks } from './useCardFilterLock';
+import { PILLARS, WARRANTY_CLAIMS, type ActiveCopqPillar } from '../data/dataStores/copqDataStore';
 
 interface CopqPageProps {
   filters: FilterState;
@@ -69,10 +72,10 @@ function IconPill({ icon: Icon, color, bg }: { icon: React.ElementType; color: s
 }
 
 function ConcentricRadialRing({ fpyValue, ytdLoss, size = 150 }: { fpyValue: number; ytdLoss: number; size?: number }) {
-  const scaleFactor = size / 150;
-  const r1 = 40; const c1 = 2 * Math.PI * r1; const offset1 = c1 * (1 - fpyValue / 100);
-  const r2 = 30; const c2 = 2 * Math.PI * r2; const offset2 = c2 * (1 - 0.985);
-  const r3 = 20; const c3 = 2 * Math.PI * r3; const offset3 = c3 * (1 - 0.90);
+  const scaleFactor = Math.max(0.75, size / 150);
+  const r1 = 54; const c1 = 2 * Math.PI * r1; const offset1 = c1 * (1 - Math.min(100, fpyValue) / 100);
+  const r2 = 46; const c2 = 2 * Math.PI * r2; const offset2 = c2 * (1 - 0.985);
+  const r3 = 38; const c3 = 2 * Math.PI * r3; const offset3 = c3 * (1 - 0.90);
   
   const formatLossInline = (v: number) => {
     if (v === 0) return '₹0';
@@ -83,18 +86,18 @@ function ConcentricRadialRing({ fpyValue, ytdLoss, size = 150 }: { fpyValue: num
   const lossLabel = formatLossInline(ytdLoss);
   return (
     <div className="relative flex items-center justify-center shrink-0 select-none" style={{ width: `${size}px`, height: `${size}px` }}>
-      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#F1F5F9" strokeWidth="5.5" />
-        <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#F1F5F9" strokeWidth="5.5" />
-        <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#F1F5F9" strokeWidth="5.5" />
-        <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#EF4444" strokeWidth="5.5" strokeDasharray={c1} strokeDashoffset={offset1} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
-        <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#10B981" strokeWidth="5.5" strokeDasharray={c2} strokeDashoffset={offset2} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
-        <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#F59E0B" strokeWidth="5.5" strokeDasharray={c3} strokeDashoffset={offset3} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r={r1} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+        <circle cx="60" cy="60" r={r2} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+        <circle cx="60" cy="60" r={r3} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+        <circle cx="60" cy="60" r={r1} fill="transparent" stroke="#EF4444" strokeWidth="4" strokeDasharray={c1} strokeDashoffset={offset1} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+        <circle cx="60" cy="60" r={r2} fill="transparent" stroke="#10B981" strokeWidth="4" strokeDasharray={c2} strokeDashoffset={offset2} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+        <circle cx="60" cy="60" r={r3} fill="transparent" stroke="#F59E0B" strokeWidth="4" strokeDasharray={c3} strokeDashoffset={offset3} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
       </svg>
-      <div className="absolute flex flex-col items-center justify-center">
-        <span style={{ color: '#0F172A', fontSize: `${16 * scaleFactor}px`, fontWeight: 800 }}>{lossLabel}</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+        <span style={{ color: '#0F172A', fontSize: `${14 * scaleFactor}px`, fontWeight: 800, lineHeight: 1 }}>{lossLabel}</span>
         {size > 80 && (
-          <span style={{ color: '#94A3B8', fontSize: `${7.5 * scaleFactor}px`, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>COPQ LOSS</span>
+          <span style={{ color: '#94A3B8', fontSize: `${7 * scaleFactor}px`, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', marginTop: '3px' }}>COPQ LOSS</span>
         )}
       </div>
     </div>
@@ -117,12 +120,10 @@ function getCopqProfile(filters: FilterState) {
 
 function getTimeLabels(filters: FilterState) {
   const trend = filters.trend;
-  const sub   = filters.subPeriod;
-  if (trend === 'year' && sub === 'yoy') return Array.from({ length: 16 }, (_, i) => String(2011 + i));
   if (trend === 'quarter') return ['Apr', 'May', 'Jun', 'Jul'];
   if (trend === 'month')   return Array.from({ length: 31 }, (_, i) => String(i + 1));
   if (trend === 'week')    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-  return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+  return ['Apr', 'May', 'Jun', 'Jul'];
 }
 
 function getInternalFailureData(filters: FilterState, copqProfile: any) {
@@ -196,6 +197,7 @@ function getSummaryTrendData(filters: FilterState) {
 }
 
 export function CopqPage({ filters, onChange }: CopqPageProps) {
+  const [hoveredBar, setHoveredBar] = useState<{ chartId: string; index: number } | null>(null);
   const [currentView, setCurrentView] = useState<CopqView>('SUMMARY_CARD');
   const [activePillar, setActivePillar] = useState<PillarId>('SUMMARY');
   const [q2Hovered, setQ2Hovered] = useState(false);
@@ -205,8 +207,42 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
   // Per-card local filter locks: [Q1, Q2, Q3, Q4]
   const [q1Lock, q2Lock, q3Lock, q4Lock] = usePageCardLocks(filters, 4);
 
+  const CustomTooltip = ({ active, payload, label, formatter }: any) => {
+    if (active && payload && payload.length) {
+      const isSunday = label === '7' || label === '14' || label === '21' || label === '28';
+      if (isSunday) {
+        return (
+          <div style={T.tt}>
+            <p className="m-0 font-bold">Sunday | Factory Holiday (Plant Shutdown)</p>
+          </div>
+        );
+      }
+      return (
+        <div style={T.tt} className="flex flex-col gap-1">
+          <p className="m-0 border-b border-slate-700 pb-1 mb-1 font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+          {payload.map((item: any, idx: number) => {
+            const formatted = formatter ? formatter(item.value, item.name, item, idx, payload) : [item.value, item.name];
+            const val = Array.isArray(formatted) ? formatted[0] : formatted;
+            const nm = Array.isArray(formatted) ? formatted[1] : item.name;
+            return (
+              <p key={idx} className="m-0 flex justify-between gap-4" style={{ color: item.color || item.fill }}>
+                <span>{nm || item.name}:</span>
+                <span>{typeof val === 'number' ? val.toLocaleString() : val}</span>
+              </p>
+            );
+          })}
+        </div>
+      );
+    }
+    return null;
+  };
+
   const renderGradientDefs = () => (
     <defs>
+      <linearGradient id="copqGradHover" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#7C3AED" stopOpacity={1} />
+        <stop offset="100%" stopColor="#6D28D9" stopOpacity={0.8} />
+      </linearGradient>
       <linearGradient id="crimsonGrad" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor="#EF4444" stopOpacity={1} /><stop offset="100%" stopColor="#991B1B" stopOpacity={0.8} />
       </linearGradient>
@@ -246,26 +282,67 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
     wrapperStyle: { paddingTop: '20px', fontSize: '9px', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: '#475569' }
   };
 
-  const renderShiftBars = (cardFilters: FilterState) => {
-    return <Bar dataKey="totalLoss" name="COPQ Loss" fill="#7C3AED" radius={[3, 3, 0, 0]} maxBarSize={22} />;
+  const renderShiftBars = (cardFilters: FilterState, data: any[] = [], chartId: string = 'copq_loss') => {
+    const chartData = data && data.length > 0 ? data : q2Data;
+    return (
+      <Bar
+        dataKey="totalLoss"
+        name="COPQ Loss"
+        fill="url(#copqGradHover)"
+        isAnimationActive={true}
+        animationDuration={1200}
+        animationEasing="ease-out"
+        radius={[4, 4, 0, 0]}
+        maxBarSize={20}
+      >
+        {chartData.map((entry: any, index: number) => {
+          const isActive = hoveredBar?.chartId === chartId && hoveredBar?.index === index;
+          const isAnyActive = hoveredBar?.chartId === chartId;
+          const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+          return (
+            <Cell
+              key={`cell-shift-${chartId}-${index}`}
+              fill="url(#copqGradHover)"
+              opacity={opacity}
+              onMouseEnter={() => setHoveredBar({ chartId, index })}
+              onMouseLeave={() => setHoveredBar(null)}
+              style={{
+                transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                transformOrigin: 'bottom center',
+                filter: isActive ? 'drop-shadow(0 0 6px #7C3AED)' : 'none',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+              }}
+            />
+          );
+        })}
+        <LabelList
+          dataKey="totalLoss"
+          position="top"
+          formatter={(v: number) => {
+            if (v >= 100000) return `₹${Math.round(v / 100000)}L`;
+            return `₹${v}L`;
+          }}
+          fontSize={8}
+          fontWeight={700}
+          fill="#475569"
+        />
+      </Bar>
+    );
   };
 
   // ── CONSTANTS FOR TABLES ──────────────────────────────────────────────────
-  const warrantyClaimsTable = [
-    { id: 'REC-091', batch: 'BAT-2891 (Valves)',  cost: 320000, action: 'Recall & Replace' },
-    { id: 'REC-052', batch: 'BAT-1102 (Seals)',   cost: 210000, action: 'Containment sort' },
-    { id: 'REC-070', batch: 'BAT-3490 (Casting)', cost: 90000, action: 'Component quarantine' },
-  ];
+  const warrantyClaimsTable = WARRANTY_CLAIMS;
 
-  // Resolve profiles for active locks
-  const q1Profile = getCopqProfile(q1Lock.effectiveFilters);
-  const q2Profile = getCopqProfile(q2Lock.effectiveFilters);
-  const q3Profile = getCopqProfile(q3Lock.effectiveFilters);
-  const q4Profile = getCopqProfile(q4Lock.effectiveFilters);
+  // Resolve profiles for active locks with useMemo dynamically listening to filter properties
+  const q1Profile = useMemo(() => getCopqProfile(q1Lock.effectiveFilters), [q1Lock.effectiveFilters.trend, q1Lock.effectiveFilters.subPeriod, q1Lock.effectiveFilters.selectedDate, q1Lock.effectiveFilters.product, q1Lock.effectiveFilters.process, q1Lock.effectiveFilters.shift]);
+  const q2Profile = useMemo(() => getCopqProfile(q2Lock.effectiveFilters), [q2Lock.effectiveFilters.trend, q2Lock.effectiveFilters.subPeriod, q2Lock.effectiveFilters.selectedDate, q2Lock.effectiveFilters.product, q2Lock.effectiveFilters.process, q2Lock.effectiveFilters.shift]);
+  const q3Profile = useMemo(() => getCopqProfile(q3Lock.effectiveFilters), [q3Lock.effectiveFilters.trend, q3Lock.effectiveFilters.subPeriod, q3Lock.effectiveFilters.selectedDate, q3Lock.effectiveFilters.product, q3Lock.effectiveFilters.process, q3Lock.effectiveFilters.shift]);
+  const q4Profile = useMemo(() => getCopqProfile(q4Lock.effectiveFilters), [q4Lock.effectiveFilters.trend, q4Lock.effectiveFilters.subPeriod, q4Lock.effectiveFilters.selectedDate, q4Lock.effectiveFilters.product, q4Lock.effectiveFilters.process, q4Lock.effectiveFilters.shift]);
 
-  const q2Data = getInternalFailureData(q2Lock.effectiveFilters, q2Profile);
-  const q3Data = getExternalFailureBulletData(q3Lock.effectiveFilters, q3Profile);
-  const q4Data = getPreventionAppraisalData(q4Lock.effectiveFilters);
+  const q2Data = useMemo(() => getInternalFailureData(q2Lock.effectiveFilters, q2Profile), [q2Lock.effectiveFilters.trend, q2Lock.effectiveFilters.subPeriod, q2Lock.effectiveFilters.selectedDate, q2Profile]);
+  const q3Data = useMemo(() => getExternalFailureBulletData(q3Lock.effectiveFilters, q3Profile), [q3Lock.effectiveFilters.trend, q3Lock.effectiveFilters.subPeriod, q3Lock.effectiveFilters.selectedDate, q3Profile]);
+  const q4Data = useMemo(() => getPreventionAppraisalData(q4Lock.effectiveFilters), [q4Lock.effectiveFilters.trend, q4Lock.effectiveFilters.subPeriod, q4Lock.effectiveFilters.selectedDate]);
 
   return (
     <div className="w-full h-[calc(100vh-130px)] overflow-y-auto select-none p-8 flex flex-col gap-5"
@@ -371,13 +448,13 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
             />
             <div className="flex-grow" style={{ minHeight: '160px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={q2Data} barCategoryGap="25%" margin={{ top: 5, right: 0, left: -38, bottom: 5 }}>
+                <BarChart data={q2Data} barCategoryGap="20%" margin={{ top: 5, right: 0, left: -38, bottom: 5 }}>
                   {renderGradientDefs()}
                   <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 7, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 7, fill: T.mutedColor }} axisLine={false} tickLine={false} tickFormatter={(value) => value === 0 ? '₹0' : `₹${Math.round(value / 100000)} L`} />
-                  <Tooltip contentStyle={T.tt} formatter={(v: number) => [formatLoss(v), '']} />
-                  {renderShiftBars(q2Lock.effectiveFilters)}
+                  <Tooltip content={<CustomTooltip formatter={(v: number) => [formatLoss(v), '']} />} />
+                  {renderShiftBars(q2Lock.effectiveFilters, q2Data, 'q2_shift')}
                   <Legend {...commonLegendProps} />
                 </BarChart>
               </ResponsiveContainer>
@@ -452,7 +529,7 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
             />
             <div className="flex-grow" style={{ minHeight: '160px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={q4Data} barCategoryGap="25%" margin={{ top: 5, right: -10, left: -38, bottom: 5 }}>
+                <ComposedChart data={q4Data} barCategoryGap="20%" margin={{ top: 5, right: -10, left: -38, bottom: 5 }}>
                   {renderGradientDefs()}
                   <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 7, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
@@ -564,7 +641,7 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
                     <div style={{ height: '35px' }} className="mt-3">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={cardInternalData.slice(0, 5)} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
-                          {renderShiftBars(effFilters)}
+                          {renderShiftBars(effFilters, cardInternalData.slice(0, 5), 'mini_shift')}
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -655,14 +732,131 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
                   </div>
                   <div style={{ height: '240px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={getSummaryTrendData(q1Lock.effectiveFilters)} barCategoryGap="25%" margin={{ top: 5, right: 30, left: -10, bottom: 5 }}>
+                      <BarChart data={getSummaryTrendData(q1Lock.effectiveFilters)} barCategoryGap="20%" margin={{ top: 5, right: 30, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 7, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 7, fill: T.mutedColor }} axisLine={false} tickLine={false} tickFormatter={(v) => v === 0 ? '₹0' : `₹${Math.round(v / 100000)} L`} />
-                        <Tooltip contentStyle={T.tt} formatter={(v: number) => [formatLoss(v), '']} />
-                        <Bar dataKey="Internal Failure" fill="#8B5CF6" stackId="losses" maxBarSize={22} />
-                        <Bar dataKey="External Failure" fill="#F59E0B" stackId="losses" maxBarSize={22} />
-                        <Bar dataKey="Prevention & Appraisal" fill="#10B981" stackId="losses" maxBarSize={22} />
+                        <Tooltip content={<CustomTooltip formatter={(v: number) => [formatLoss(v), '']} />} />
+                        <Bar
+                          dataKey="Internal Failure"
+                          fill="url(#amethystGrad)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={20}
+                          stackId="losses"
+                        >
+                          {getSummaryTrendData(q1Lock.effectiveFilters).map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'consolidated_copq' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'consolidated_copq';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-internal-${index}`}
+                                fill="url(#amethystGrad)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'consolidated_copq', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #7C3AED)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="Internal Failure"
+                            position="top"
+                            formatter={(v: number) => v > 0 ? `₹${Math.round(v / 100000)}L` : ''}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
+                        <Bar
+                          dataKey="External Failure"
+                          fill="url(#orangeGrad)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={20}
+                          stackId="losses"
+                        >
+                          {getSummaryTrendData(q1Lock.effectiveFilters).map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'consolidated_copq' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'consolidated_copq';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-external-${index}`}
+                                fill="url(#orangeGrad)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'consolidated_copq', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #7C3AED)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="External Failure"
+                            position="top"
+                            formatter={(v: number) => v > 0 ? `₹${Math.round(v / 100000)}L` : ''}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
+                        <Bar
+                          dataKey="Prevention & Appraisal"
+                          fill="url(#tealGrad)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={20}
+                          stackId="losses"
+                        >
+                          {getSummaryTrendData(q1Lock.effectiveFilters).map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'consolidated_copq' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'consolidated_copq';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-prevention-${index}`}
+                                fill="url(#tealGrad)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'consolidated_copq', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #7C3AED)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="Prevention & Appraisal"
+                            position="top"
+                            formatter={(v: number) => v > 0 ? `₹${Math.round(v / 100000)}L` : ''}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
                         <Legend {...commonLegendProps} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -686,15 +880,15 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
                   </div>
                   <div style={{ height: '240px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={q2Data} barCategoryGap="25%" margin={{ top: 5, right: 30, left: -10, bottom: 5 }}>
+                      <BarChart data={q2Data} barCategoryGap="20%" margin={{ top: 5, right: 30, left: -10, bottom: 5 }}>
                         {renderGradientDefs()}
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 7, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 7, fill: T.mutedColor }} axisLine={false} tickLine={false} tickFormatter={(v) => v === 0 ? '₹0' : `₹${Math.round(v / 100000)} L`} />
-                        <Tooltip contentStyle={T.tt} formatter={(v: number) => [formatLoss(v), '']} />
+                        <Tooltip content={<CustomTooltip formatter={(v: number) => [formatLoss(v), '']} />} />
                         <ReferenceLine y={q2Profile.monthlyWarningLimit / 3} stroke="#EF4444" strokeDasharray="4 4" strokeWidth={1.5}
                           label={{ value: `Limit ${formatLoss(q2Profile.monthlyWarningLimit / 3)}`, position: 'right', fontSize: 8, fill: '#EF4444', fontWeight: 700 }} />
-                        {renderShiftBars(q2Lock.effectiveFilters)}
+                        {renderShiftBars(q2Lock.effectiveFilters, q2Data, 'q2_shift')}
                         <Legend {...commonLegendProps} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -708,13 +902,53 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
                   </div>
                   <div style={{ height: '250px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={getDefectTaxonomyPareto(q2Lock.effectiveFilters)} barCategoryGap="25%" margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <ComposedChart data={getDefectTaxonomyPareto(q2Lock.effectiveFilters)} barCategoryGap="20%" margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="type" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="left" name="Count" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="right" orientation="right" name="Carrying Cost" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} tickFormatter={(v) => formatLoss(v)} />
-                        <Tooltip contentStyle={T.tt} formatter={(value: any, name: string) => name === 'Carrying Cost' ? [formatLoss(value), name] : [value, name]} />
-                        <Bar yAxisId="left" dataKey="count" name="Defect Count" fill="url(#gCrimsonBar)" maxBarSize={30} radius={[3, 3, 0, 0]} />
+                        <Tooltip content={<CustomTooltip formatter={(value: any, name: string) => name === 'Carrying Cost' ? [formatLoss(value), name] : [value, name]} />} />
+                        <Bar
+                          yAxisId="left"
+                          dataKey="count"
+                          name="Defect Count"
+                          fill="url(#gCrimsonBar)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={30}
+                        >
+                          {getDefectTaxonomyPareto(q2Lock.effectiveFilters).map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'defect_pareto' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'defect_pareto';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-defect-pareto-${index}`}
+                                fill="url(#gCrimsonBar)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'defect_pareto', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #7C3AED)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="count"
+                            position="top"
+                            formatter={(v: number) => Math.round(v).toLocaleString()}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
                         <Line yAxisId="right" type="monotone" dataKey="carryingCost" name="Carrying Cost" stroke="#F59E0B" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                         <Legend {...commonLegendProps} />
                       </ComposedChart>
@@ -767,13 +1001,53 @@ export function CopqPage({ filters, onChange }: CopqPageProps) {
                   </div>
                   <div style={{ height: '240px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={q3Data} barCategoryGap="25%" margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <ComposedChart data={q3Data} barCategoryGap="20%" margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="left" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} tickFormatter={(v) => formatLoss(v)} />
                         <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} unit="d" />
-                        <Tooltip contentStyle={T.tt} formatter={(value: any, name: string) => name === 'Claim Cost' ? [formatLoss(value), name] : [`${value} days`, name]} />
-                        <Bar yAxisId="left" dataKey="actual" name="Claim Cost" fill="url(#orangeGrad)" maxBarSize={22} radius={[3, 3, 0, 0]} />
+                        <Tooltip content={<CustomTooltip formatter={(value: any, name: string) => name === 'Claim Cost' ? [formatLoss(value), name] : [`${value} days`, name]} />} />
+                        <Bar
+                          yAxisId="left"
+                          dataKey="actual"
+                          name="Claim Cost"
+                          fill="url(#orangeGrad)"
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-out"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={20}
+                        >
+                          {q3Data.map((entry: any, index: number) => {
+                            const isActive = hoveredBar?.chartId === 'claim_cost' && hoveredBar?.index === index;
+                            const isAnyActive = hoveredBar?.chartId === 'claim_cost';
+                            const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                            return (
+                              <Cell
+                                key={`cell-claim-${index}`}
+                                fill="url(#orangeGrad)"
+                                opacity={opacity}
+                                onMouseEnter={() => setHoveredBar({ chartId: 'claim_cost', index })}
+                                onMouseLeave={() => setHoveredBar(null)}
+                                style={{
+                                  transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                  transformOrigin: 'bottom center',
+                                  filter: isActive ? 'drop-shadow(0 0 6px #7C3AED)' : 'none',
+                                  transition: 'all 0.2s ease',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            );
+                          })}
+                          <LabelList
+                            dataKey="actual"
+                            position="top"
+                            formatter={(v: number) => `₹${Math.round(v / 100000)}L`}
+                            fontSize={8}
+                            fontWeight={700}
+                            fill="#475569"
+                          />
+                        </Bar>
                         <Line yAxisId="right" type="monotone" dataKey="lagDays" name="Avg Lag Time" stroke="#EF4444" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                         <Legend {...commonLegendProps} />
                       </ComposedChart>

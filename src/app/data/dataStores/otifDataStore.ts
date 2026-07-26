@@ -1,4 +1,44 @@
-import { PeriodId, ProductId, getTimeLabels } from './types';
+import { PeriodId, ProductId, getTimeLabels, isSundayMtd } from './types';
+
+export const PILLARS = [
+  {
+    id: 'DISPATCH' as const,
+    label: 'Dispatch Adherence',
+    value: 94,
+    target: 98,
+    color: '#F5788B',
+  },
+  {
+    id: 'PRODUCTION' as const,
+    label: 'Production Plan vs Actual',
+    value: 92,
+    target: 95,
+    color: '#FF8F00',
+  },
+  {
+    id: 'READINESS' as const,
+    label: 'Material Readiness',
+    value: 96,
+    target: 99,
+    color: '#FBC02D',
+  },
+  {
+    id: 'DELIVERY' as const,
+    label: 'Delivery On-Time',
+    value: 91,
+    target: 95,
+    color: '#6366F1',
+  },
+] as const;
+
+export type ActiveOtifPillar = typeof PILLARS[number]['id'] | null;
+
+export const DELAY_BREAKDOWN = [
+  { cause: 'Supplier Raw Material Delay', count: 42, color: '#F5788B' },
+  { cause: 'Machine Downtime / Bottleneck', count: 28, color: '#FF8F00' },
+  { cause: 'Quality Inspection Hold', count: 18, color: '#FBC02D' },
+  { cause: 'Logistics / Transit Delay', count: 12, color: '#6366F1' },
+];
 
 export function resolveOtifData(period: PeriodId, product: ProductId, process: string): any {
   const tLabels = getTimeLabels(period);
@@ -7,10 +47,7 @@ export function resolveOtifData(period: PeriodId, product: ProductId, process: s
   let otifVal = isLW1 ? 90.5 : 93.9;
   let adherenceVal = isLW1 ? 88.0 : 91.5;
 
-  if (period === 'YoY') {
-    otifVal = 94.5;
-    adherenceVal = 92.5;
-  } else if (period === 'MTD') {
+  if (period === 'MTD') {
     otifVal = 91.2;
     adherenceVal = 89.0;
   }
@@ -68,12 +105,112 @@ export function resolveOtifData(period: PeriodId, product: ProductId, process: s
 
   const targetValue = isLW1 ? 90 : (product === 'MATRIX' ? 97 : (product === 'BANANA' ? 92 : 95));
 
+  const otifSummaryData = tLabels.map((name, i) => {
+    const scheduled = 1000 + Math.round(Math.sin(i) * 200);
+    const delivered = scheduled - Math.round(Math.abs(Math.cos(i) * 100));
+    const pct = Number(((delivered / scheduled) * 100).toFixed(1));
+    return { name, scheduled, delivered, pct };
+  });
+
+  const dispatchAdherenceData = tLabels.map((name, i) => {
+    const onTime = 300 + Math.round(Math.sin(i) * 50);
+    const delayed = 10 + Math.round(Math.cos(i) * 20);
+    return { name, onTime, delayed };
+  });
+
+  const productionPlanActualData = tLabels.map((name, i) => {
+    const plan = 1200 + Math.round(Math.cos(i) * 80);
+    const actual = plan - 50 + Math.round(Math.sin(i * 1.2) * 150);
+    const variance = Number((((actual - plan) / plan) * 100).toFixed(1));
+    const adherence = Math.min(100, Math.max(60, Math.round(95 + (actual - plan) / plan * 8)));
+    return { name, plan, actual, variance, adherence };
+  });
+
+  const materialReadinessData = tLabels.map((name, i) => {
+    const raw = 320 + Math.round(Math.sin(i) * 40);
+    const wip = 210 + Math.round(Math.cos(i * 1.3) * 30);
+    return { name, raw, wip };
+  });
+
+  const weeklyProdDetails = Array.from({ length: 12 }, (_, i) => {
+    const pMachined = 100 + Math.round(Math.sin(i) * 20);
+    const pAssembled = 120 + Math.round(Math.cos(i) * 20);
+    const pFabricated = 80 + Math.round(Math.sin(i * 1.5) * 15);
+    const aMachined = pMachined - 10 + Math.round(Math.cos(i) * 15);
+    const aAssembled = pAssembled + (i % 2 === 0 ? 10 : -15);
+    const aFabricated = pFabricated - 5 + Math.round(Math.sin(i) * 10);
+
+    return {
+      week: `W${i + 1}`,
+      machiningPlanned: pMachined,
+      machiningActual: aMachined,
+      assemblyPlanned: pAssembled,
+      assemblyActual: aAssembled,
+      fabricationPlanned: pFabricated,
+      fabricationActual: aFabricated,
+      totalPlanned: pMachined + pAssembled + pFabricated,
+      totalActual: aMachined + aAssembled + aFabricated,
+      status: aMachined + aAssembled + aFabricated >= pMachined + pAssembled + pFabricated ? 'ON_TRACK' : 'BEHIND'
+    };
+  });
+
+  if (period === 'MTD') {
+    for (let i = 0; i < tLabels.length; i++) {
+      if (isSundayMtd(period, i)) {
+        if (otifTrend[i]) {
+          otifTrend[i] = {
+            name: otifTrend[i].name,
+            value: 0,
+            target: 95.0
+          };
+        }
+        if (otifSummaryData[i]) {
+          otifSummaryData[i] = {
+            name: otifSummaryData[i].name,
+            scheduled: 0,
+            delivered: 0,
+            pct: 0
+          };
+        }
+        if (dispatchAdherenceData[i]) {
+          dispatchAdherenceData[i] = {
+            name: dispatchAdherenceData[i].name,
+            onTime: 0,
+            delayed: 0
+          };
+        }
+        if (productionPlanActualData[i]) {
+          productionPlanActualData[i] = {
+            name: productionPlanActualData[i].name,
+            plan: 0,
+            actual: 0,
+            variance: 0,
+            adherence: 0
+          };
+        }
+        if (materialReadinessData[i]) {
+          materialReadinessData[i] = {
+            name: materialReadinessData[i].name,
+            raw: 0,
+            wip: 0
+          };
+        }
+      }
+    }
+  }
+
   return {
     otifVal,
     adherenceVal,
     otifTrend,
     weeklyOutputData,
     supplyChainStageData,
+    otifSummaryData,
+    dispatchAdherenceData,
+    productionPlanActualData,
+    materialReadinessData,
+    delayBreakdownData: DELAY_BREAKDOWN,
+    weeklyProdDetails,
     targetValue,
     icon: 'Truck',
     gradient: ['#F5788B', '#FFAE6E'],

@@ -20,6 +20,7 @@ import {
   Cell,
   PieChart,
   Pie,
+  LabelList,
 } from 'recharts';
 import { type FilterState } from './TimeTrendFilter';
 import {
@@ -37,7 +38,7 @@ import {
 import { CardLockHeader, lockedCardStyle } from './CardLockHeader';
 import { usePageCardLocks } from './useCardFilterLock';
 import { cn } from './ui/utils';
-import { getDashboardData } from '../data/dashboardDataStore';
+import { getDashboardData, resolvePromisedActualData, resolveAdherenceDataWithVolume } from '../data/dataStores';
 
 interface BprPageProps {
   filters: FilterState;
@@ -74,9 +75,9 @@ const T = {
 };
 
 // Concentric radial ring dimensions
-const R_bpr_1 = 32;
-const R_bpr_2 = 24;
-const R_bpr_3 = 16;
+const R_bpr_1 = 54;
+const R_bpr_2 = 46;
+const R_bpr_3 = 38;
 const C_bpr_1 = 2 * Math.PI * R_bpr_1;
 const C_bpr_2 = 2 * Math.PI * R_bpr_2;
 const C_bpr_3 = 2 * Math.PI * R_bpr_3;
@@ -92,6 +93,7 @@ function isMtdWtd(eff: FilterState) {
 }
 
 export function BprPage({ filters, onChange }: BprPageProps) {
+  const [hoveredBar, setHoveredBar] = useState<{ chartId: string; index: number } | null>(null);
   const [activePillar, setActivePillar] = useState<PillarId | null>(null);
   const [q2Hovered, setQ2Hovered] = useState(false);
   const [q3Hovered, setQ3Hovered] = useState(false);
@@ -100,8 +102,46 @@ export function BprPage({ filters, onChange }: BprPageProps) {
   const [q1Lock, q2Lock, q3Lock, q4Lock] = usePageCardLocks(filters, 4);
   const [selectedBufferZone, setSelectedBufferZone] = useState<string | null>(null);
 
+  const CustomTooltip = ({ active, payload, label, formatter }: any) => {
+    if (active && payload && payload.length) {
+      const isSunday = label === '7' || label === '14' || label === '21' || label === '28';
+      if (isSunday) {
+        return (
+          <div style={T.tt}>
+            <p className="m-0 font-bold">Sunday | Factory Holiday (Plant Shutdown)</p>
+          </div>
+        );
+      }
+      return (
+        <div style={T.tt} className="flex flex-col gap-1">
+          <p className="m-0 border-b border-slate-700 pb-1 mb-1 font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+          {payload.map((item: any, idx: number) => {
+            const formatted = formatter ? formatter(item.value, item.name, item, idx, payload) : [item.value, item.name];
+            const val = Array.isArray(formatted) ? formatted[0] : formatted;
+            const nm = Array.isArray(formatted) ? formatted[1] : item.name;
+            return (
+              <p key={idx} className="m-0 flex justify-between gap-4" style={{ color: item.color || item.fill }}>
+                <span>{nm || item.name}:</span>
+                <span>{typeof val === 'number' ? val.toLocaleString() : val}</span>
+              </p>
+            );
+          })}
+        </div>
+      );
+    }
+    return null;
+  };
+
   const renderGradientDefs = () => (
     <defs>
+      <linearGradient id="cyanBlueGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#4988C4" stopOpacity={1} />
+        <stop offset="100%" stopColor="#2A5C91" stopOpacity={0.8} />
+      </linearGradient>
+      <linearGradient id="orangeGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#FFAE6E" stopOpacity={1} />
+        <stop offset="100%" stopColor="#D97706" stopOpacity={0.8} />
+      </linearGradient>
       <linearGradient id="redGrad" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%"   stopColor="#EF4444" stopOpacity={1} />
         <stop offset="100%" stopColor="#991B1B" stopOpacity={0.8} />
@@ -125,11 +165,181 @@ export function BprPage({ filters, onChange }: BprPageProps) {
     </defs>
   );
 
+  const renderBufferStackedBars = (data: any[], chartId: string) => {
+    return [
+      <Bar
+        key="critical"
+        dataKey="critical"
+        name="Critical Stockout"
+        stackId="a"
+        fill="url(#redGrad)"
+        isAnimationActive={true}
+        animationDuration={1200}
+        animationEasing="ease-out"
+        maxBarSize={20}
+      >
+        {data.map((entry: any, index: number) => {
+          const isActive = hoveredBar?.chartId === chartId && hoveredBar?.index === index;
+          const isAnyActive = hoveredBar?.chartId === chartId;
+          const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+          return (
+            <Cell
+              key={`cell-critical-${index}`}
+              fill="url(#redGrad)"
+              opacity={opacity}
+              onMouseEnter={() => setHoveredBar({ chartId, index })}
+              onMouseLeave={() => setHoveredBar(null)}
+              style={{
+                transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                transformOrigin: 'bottom center',
+                filter: isActive ? 'drop-shadow(0 0 6px #0EA5E9)' : 'none',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+              }}
+            />
+          );
+        })}
+        <LabelList
+          dataKey="critical"
+          position="top"
+          formatter={(v: number) => v > 0 ? `${Math.round(v)}%` : ''}
+          fontSize={8}
+          fontWeight={700}
+          fill="#475569"
+        />
+      </Bar>,
+      <Bar
+        key="warning"
+        dataKey="warning"
+        name="Warning/Reorder"
+        stackId="a"
+        fill="url(#amberGrad)"
+        isAnimationActive={true}
+        animationDuration={1200}
+        animationEasing="ease-out"
+        maxBarSize={20}
+      >
+        {data.map((entry: any, index: number) => {
+          const isActive = hoveredBar?.chartId === chartId && hoveredBar?.index === index;
+          const isAnyActive = hoveredBar?.chartId === chartId;
+          const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+          return (
+            <Cell
+              key={`cell-warning-${index}`}
+              fill="url(#amberGrad)"
+              opacity={opacity}
+              onMouseEnter={() => setHoveredBar({ chartId, index })}
+              onMouseLeave={() => setHoveredBar(null)}
+              style={{
+                transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                transformOrigin: 'bottom center',
+                filter: isActive ? 'drop-shadow(0 0 6px #0EA5E9)' : 'none',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+              }}
+            />
+          );
+        })}
+        <LabelList
+          dataKey="warning"
+          position="top"
+          formatter={(v: number) => v > 0 ? `${Math.round(v)}%` : ''}
+          fontSize={8}
+          fontWeight={700}
+          fill="#475569"
+        />
+      </Bar>,
+      <Bar
+        key="optimal"
+        dataKey="optimal"
+        name="Optimal/Safe"
+        stackId="a"
+        fill="url(#greenGrad)"
+        isAnimationActive={true}
+        animationDuration={1200}
+        animationEasing="ease-out"
+        maxBarSize={20}
+      >
+        {data.map((entry: any, index: number) => {
+          const isActive = hoveredBar?.chartId === chartId && hoveredBar?.index === index;
+          const isAnyActive = hoveredBar?.chartId === chartId;
+          const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+          return (
+            <Cell
+              key={`cell-optimal-${index}`}
+              fill="url(#greenGrad)"
+              opacity={opacity}
+              onMouseEnter={() => setHoveredBar({ chartId, index })}
+              onMouseLeave={() => setHoveredBar(null)}
+              style={{
+                transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                transformOrigin: 'bottom center',
+                filter: isActive ? 'drop-shadow(0 0 6px #0EA5E9)' : 'none',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+              }}
+            />
+          );
+        })}
+        <LabelList
+          dataKey="optimal"
+          position="top"
+          formatter={(v: number) => v > 0 ? `${Math.round(v)}%` : ''}
+          fontSize={8}
+          fontWeight={700}
+          fill="#475569"
+        />
+      </Bar>,
+      <Bar
+        key="overstock"
+        dataKey="overstock"
+        name="Overstock"
+        stackId="a"
+        fill="url(#blueGrad)"
+        isAnimationActive={true}
+        animationDuration={1200}
+        animationEasing="ease-out"
+        radius={[4, 4, 0, 0]}
+        maxBarSize={20}
+      >
+        {data.map((entry: any, index: number) => {
+          const isActive = hoveredBar?.chartId === chartId && hoveredBar?.index === index;
+          const isAnyActive = hoveredBar?.chartId === chartId;
+          const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+          return (
+            <Cell
+              key={`cell-overstock-${index}`}
+              fill="url(#blueGrad)"
+              opacity={opacity}
+              onMouseEnter={() => setHoveredBar({ chartId, index })}
+              onMouseLeave={() => setHoveredBar(null)}
+              style={{
+                transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                transformOrigin: 'bottom center',
+                filter: isActive ? 'drop-shadow(0 0 6px #0EA5E9)' : 'none',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+              }}
+            />
+          );
+        })}
+        <LabelList
+          dataKey="overstock"
+          position="top"
+          formatter={(v: number) => v > 0 ? `${Math.round(v)}%` : ''}
+          fontSize={8}
+          fontWeight={700}
+          fill="#475569"
+        />
+      </Bar>
+    ];
+  };
+
   // Compute quadrant states for landing page render based on respective lock snapshots
-  const q1Data = getBprData(q1Lock.effectiveFilters);
-  const q2Data = getBprData(q2Lock.effectiveFilters);
-  const q3Data = getBprData(q3Lock.effectiveFilters);
-  const q4Data = getBprData(q4Lock.effectiveFilters);
+  const q1Data = useMemo(() => getBprData(q1Lock.effectiveFilters), [q1Lock.effectiveFilters.trend, q1Lock.effectiveFilters.subPeriod, q1Lock.effectiveFilters.selectedDate, q1Lock.effectiveFilters.product, q1Lock.effectiveFilters.process]);
+  const q2Data = useMemo(() => getBprData(q2Lock.effectiveFilters), [q2Lock.effectiveFilters.trend, q2Lock.effectiveFilters.subPeriod, q2Lock.effectiveFilters.selectedDate, q2Lock.effectiveFilters.product, q2Lock.effectiveFilters.process]);
+  const q3Data = useMemo(() => getBprData(q3Lock.effectiveFilters), [q3Lock.effectiveFilters.trend, q3Lock.effectiveFilters.subPeriod, q3Lock.effectiveFilters.selectedDate, q3Lock.effectiveFilters.product, q3Lock.effectiveFilters.process]);
+  const q4Data = useMemo(() => getBprData(q4Lock.effectiveFilters), [q4Lock.effectiveFilters.trend, q4Lock.effectiveFilters.subPeriod, q4Lock.effectiveFilters.selectedDate, q4Lock.effectiveFilters.product, q4Lock.effectiveFilters.process]);
 
   // Compute active data for right column workspace based on current active tab's effective filters
   const activeData = useMemo(() => {
@@ -139,62 +349,26 @@ export function BprPage({ filters, onChange }: BprPageProps) {
       activePillar === 'ADHERENCE' ? q3Lock :
       q4Lock;
     return getBprData(cardLock ? cardLock.effectiveFilters : filters);
-  }, [activePillar, q1Lock.effectiveFilters, q2Lock.effectiveFilters, q3Lock.effectiveFilters, q4Lock.effectiveFilters, filters]);
+  }, [activePillar, q1Lock.effectiveFilters.trend, q1Lock.effectiveFilters.subPeriod, q1Lock.effectiveFilters.selectedDate, q1Lock.effectiveFilters.product, q1Lock.effectiveFilters.process,
+      q2Lock.effectiveFilters.trend, q2Lock.effectiveFilters.subPeriod, q2Lock.effectiveFilters.selectedDate, q2Lock.effectiveFilters.product, q2Lock.effectiveFilters.process,
+      q3Lock.effectiveFilters.trend, q3Lock.effectiveFilters.subPeriod, q3Lock.effectiveFilters.selectedDate, q3Lock.effectiveFilters.product, q3Lock.effectiveFilters.process,
+      q4Lock.effectiveFilters.trend, q4Lock.effectiveFilters.subPeriod, q4Lock.effectiveFilters.selectedDate, q4Lock.effectiveFilters.product, q4Lock.effectiveFilters.process,
+      filters.trend, filters.subPeriod, filters.selectedDate, filters.product, filters.process]);
 
   const q2PromisedActualData = useMemo(() => {
-    const basePromised: Record<string, number> = {
-      'Krupp Steel Forge': 6,
-      'Acme Castings': 8,
-      'SealTech Components': 5,
-    };
-    return q2Data.vendorDelayData.map((d: any) => {
-      const promised = basePromised[d.vendor] || 5;
-      const actual = +(promised + d.delayDays).toFixed(1);
-      return {
-        supplier: d.vendor,
-        promised,
-        actual,
-      };
-    });
+    return resolvePromisedActualData(q2Data.vendorDelayData).map(d => ({ supplier: d.vendor, promised: d.promised, actual: d.actual }));
   }, [q2Data.vendorDelayData]);
 
   const activePromisedActualData = useMemo(() => {
-    const basePromised: Record<string, number> = {
-      'Krupp Steel Forge': 6,
-      'Acme Castings': 8,
-      'SealTech Components': 5,
-    };
-    return activeData.vendorDelayData.map((d: any) => {
-      const promised = basePromised[d.vendor] || 5;
-      const actual = +(promised + d.delayDays).toFixed(1);
-      return {
-        supplier: d.vendor,
-        promised,
-        actual,
-      };
-    });
+    return resolvePromisedActualData(activeData.vendorDelayData).map(d => ({ supplier: d.vendor, promised: d.promised, actual: d.actual }));
   }, [activeData.vendorDelayData]);
 
   const q3AdherenceDataWithVolume = useMemo(() => {
-    return q3Data.scheduleAdherenceData.map((d: any, i: number) => {
-      const baseOrders = 200 + (Math.sin(i) * 100) + (Math.cos(i * 2) * 50);
-      const ordersDispatched = Math.round(baseOrders);
-      return {
-        ...d,
-        ordersDispatched,
-      };
-    });
+    return resolveAdherenceDataWithVolume(q3Data.scheduleAdherenceData);
   }, [q3Data.scheduleAdherenceData]);
 
   const activeAdherenceDataWithVolume = useMemo(() => {
-    return activeData.scheduleAdherenceData.map((d: any, i: number) => {
-      const baseOrders = 200 + (Math.sin(i) * 100) + (Math.cos(i * 2) * 50);
-      const ordersDispatched = Math.round(baseOrders);
-      return {
-        ...d,
-        ordersDispatched,
-      };
-    });
+    return resolveAdherenceDataWithVolume(activeData.scheduleAdherenceData);
   }, [activeData.scheduleAdherenceData]);
 
   const filteredReplenishmentLedger = useMemo(() => {
@@ -265,9 +439,8 @@ export function BprPage({ filters, onChange }: BprPageProps) {
     const filterTags = [];
     const eff = cardLock.effectiveFilters;
 
-    let periodText = 'Jan-Jul';
-    if (eff.trend === 'year' && eff.subPeriod === 'yoy') periodText = '2011-2026';
-    else if (eff.trend === 'quarter') periodText = 'QTD';
+    let periodText = 'Apr-Jul';
+    if (eff.trend === 'quarter') periodText = 'QTD';
     else if (eff.trend === 'month') periodText = 'MTD';
     else if (eff.trend === 'week') periodText = 'WTD';
     filterTags.push({ text: periodText, type: 'gray' });
@@ -469,15 +642,12 @@ export function BprPage({ filters, onChange }: BprPageProps) {
         </div>
         <div className="h-[260px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={activeData.bufferPenetrationStackedData} barCategoryGap="25%" margin={{ top: 15, right: 24, left: -20, bottom: 10 }}>
+            <BarChart data={activeData.bufferPenetrationStackedData} barCategoryGap="20%" margin={{ top: 15, right: 24, left: -20, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 800 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 8, fill: T.mutedColor }} tickFormatter={(v) => `${v}%`} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={T.tt} formatter={(value: number) => [`${value}%`]} />
-              <Bar dataKey="critical" name="Critical Stockout" stackId="a" fill="#EF4444" maxBarSize={22} />
-              <Bar dataKey="warning" name="Warning/Reorder" stackId="a" fill="#F59E0B" maxBarSize={22} />
-              <Bar dataKey="optimal" name="Optimal/Safe" stackId="a" fill="#10B981" maxBarSize={22} />
-              <Bar dataKey="overstock" name="Overstock" stackId="a" fill="#3B82F6" radius={[3, 3, 0, 0]} maxBarSize={22} />
+              <Tooltip content={<CustomTooltip formatter={(value: number) => [`${value}%`]} />} />
+              {renderBufferStackedBars(activeData.bufferPenetrationStackedData, 'bpr_stacked')}
               <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
             </BarChart>
           </ResponsiveContainer>
@@ -509,7 +679,7 @@ export function BprPage({ filters, onChange }: BprPageProps) {
           </div>
           <div className="h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activeData.replenishmentBacklogData} barCategoryGap="25%" margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
+              <BarChart data={activeData.replenishmentBacklogData} barCategoryGap="20%" margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
                 <defs>
                   <linearGradient id="yellowBacklog" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#FFDA62" stopOpacity={1} />
@@ -527,10 +697,128 @@ export function BprPage({ filters, onChange }: BprPageProps) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                 <XAxis dataKey="supplier" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 8, fill: '#64748B' }} ticks={[0, 10, 20, 30, 40]} domain={[0, 40]} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={T.tt} />
-                <Bar dataKey="minorDelay" name="0-3 Days Overdue" stackId="a" fill="url(#yellowBacklog)" maxBarSize={30} />
-                <Bar dataKey="moderateDelay" name="4-7 Days Overdue" stackId="a" fill="url(#orangeBacklog)" maxBarSize={30} />
-                <Bar dataKey="criticalDelay" name="8+ Days Overdue (Critical)" stackId="a" fill="url(#crimsonBacklog)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar
+                  dataKey="minorDelay"
+                  name="0-3 Days Overdue"
+                  stackId="a"
+                  fill="url(#yellowBacklog)"
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                  maxBarSize={30}
+                >
+                  {activeData.replenishmentBacklogData.map((entry: any, index: number) => {
+                    const isActive = hoveredBar?.chartId === 'replenishment_backlog' && hoveredBar?.index === index;
+                    const isAnyActive = hoveredBar?.chartId === 'replenishment_backlog';
+                    const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                    return (
+                      <Cell
+                        key={`cell-minor-${index}`}
+                        fill="url(#yellowBacklog)"
+                        opacity={opacity}
+                        onMouseEnter={() => setHoveredBar({ chartId: 'replenishment_backlog', index })}
+                        onMouseLeave={() => setHoveredBar(null)}
+                        style={{
+                          transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                          transformOrigin: 'bottom center',
+                          filter: isActive ? 'drop-shadow(0 0 6px #0EA5E9)' : 'none',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    );
+                  })}
+                  <LabelList
+                    dataKey="minorDelay"
+                    position="top"
+                    formatter={(v: number) => v > 0 ? Math.round(v) : ''}
+                    fontSize={8}
+                    fontWeight={700}
+                    fill="#475569"
+                  />
+                </Bar>
+                <Bar
+                  dataKey="moderateDelay"
+                  name="4-7 Days Overdue"
+                  stackId="a"
+                  fill="url(#orangeBacklog)"
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                  maxBarSize={30}
+                >
+                  {activeData.replenishmentBacklogData.map((entry: any, index: number) => {
+                    const isActive = hoveredBar?.chartId === 'replenishment_backlog' && hoveredBar?.index === index;
+                    const isAnyActive = hoveredBar?.chartId === 'replenishment_backlog';
+                    const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                    return (
+                      <Cell
+                        key={`cell-moderate-${index}`}
+                        fill="url(#orangeBacklog)"
+                        opacity={opacity}
+                        onMouseEnter={() => setHoveredBar({ chartId: 'replenishment_backlog', index })}
+                        onMouseLeave={() => setHoveredBar(null)}
+                        style={{
+                          transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                          transformOrigin: 'bottom center',
+                          filter: isActive ? 'drop-shadow(0 0 6px #0EA5E9)' : 'none',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    );
+                  })}
+                  <LabelList
+                    dataKey="moderateDelay"
+                    position="top"
+                    formatter={(v: number) => v > 0 ? Math.round(v) : ''}
+                    fontSize={8}
+                    fontWeight={700}
+                    fill="#475569"
+                  />
+                </Bar>
+                <Bar
+                  dataKey="criticalDelay"
+                  name="8+ Days Overdue (Critical)"
+                  stackId="a"
+                  fill="url(#crimsonBacklog)"
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={30}
+                >
+                  {activeData.replenishmentBacklogData.map((entry: any, index: number) => {
+                    const isActive = hoveredBar?.chartId === 'replenishment_backlog' && hoveredBar?.index === index;
+                    const isAnyActive = hoveredBar?.chartId === 'replenishment_backlog';
+                    const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                    return (
+                      <Cell
+                        key={`cell-critical-delay-${index}`}
+                        fill="url(#crimsonBacklog)"
+                        opacity={opacity}
+                        onMouseEnter={() => setHoveredBar({ chartId: 'replenishment_backlog', index })}
+                        onMouseLeave={() => setHoveredBar(null)}
+                        style={{
+                          transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                          transformOrigin: 'bottom center',
+                          filter: isActive ? 'drop-shadow(0 0 6px #0EA5E9)' : 'none',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    );
+                  })}
+                  <LabelList
+                    dataKey="criticalDelay"
+                    position="top"
+                    formatter={(v: number) => v > 0 ? Math.round(v) : ''}
+                    fontSize={8}
+                    fontWeight={700}
+                    fill="#475569"
+                  />
+                </Bar>
                 <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
               </BarChart>
             </ResponsiveContainer>
@@ -626,8 +914,48 @@ export function BprPage({ filters, onChange }: BprPageProps) {
                 <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
                 <YAxis yAxisId="left" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} />
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} domain={[50, 100]} />
-                <Tooltip contentStyle={T.tt} />
-                <Bar yAxisId="left" dataKey="ordersDispatched" name="Total Orders Dispatched" fill="#4988C4" radius={[3, 3, 0, 0]} maxBarSize={30} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar
+                  yAxisId="left"
+                  dataKey="ordersDispatched"
+                  name="Total Orders Dispatched"
+                  fill="url(#cyanBlueGrad)"
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={30}
+                >
+                  {activeAdherenceDataWithVolume.map((entry: any, index: number) => {
+                    const isActive = hoveredBar?.chartId === 'adherence_dispatched' && hoveredBar?.index === index;
+                    const isAnyActive = hoveredBar?.chartId === 'adherence_dispatched';
+                    const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                    return (
+                      <Cell
+                        key={`cell-adherence-disp-${index}`}
+                        fill="url(#cyanBlueGrad)"
+                        opacity={opacity}
+                        onMouseEnter={() => setHoveredBar({ chartId: 'adherence_dispatched', index })}
+                        onMouseLeave={() => setHoveredBar(null)}
+                        style={{
+                          transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                          transformOrigin: 'bottom center',
+                          filter: isActive ? 'drop-shadow(0 0 6px #0EA5E9)' : 'none',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    );
+                  })}
+                  <LabelList
+                    dataKey="ordersDispatched"
+                    position="top"
+                    formatter={(v: number) => Math.round(v).toLocaleString()}
+                    fontSize={8}
+                    fontWeight={700}
+                    fill="#475569"
+                  />
+                </Bar>
                 <Line 
                   yAxisId="right"
                   type="monotone" 
@@ -748,7 +1076,7 @@ export function BprPage({ filters, onChange }: BprPageProps) {
                       />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={T.tt} formatter={(value) => [`${value}%`]} />
+                  <Tooltip content={<CustomTooltip formatter={(value: any) => [`${value}%`]} />} />
                   <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
                 </PieChart>
               </ResponsiveContainer>
@@ -764,11 +1092,8 @@ export function BprPage({ filters, onChange }: BprPageProps) {
                   <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 800 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 8, fill: T.mutedColor }} tickFormatter={(v) => `${v}%`} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={T.tt} formatter={(value: number) => [`${value}%`]} />
-                  <Bar dataKey="critical" name="Critical Stockout" stackId="a" fill="#EF4444" />
-                  <Bar dataKey="warning" name="Warning/Reorder" stackId="a" fill="#F59E0B" />
-                  <Bar dataKey="optimal" name="Optimal/Safe" stackId="a" fill="#10B981" />
-                  <Bar dataKey="overstock" name="Overstock" stackId="a" fill="#3B82F6" radius={[3, 3, 0, 0]} />
+                  <Tooltip content={<CustomTooltip formatter={(value: number) => [`${value}%`]} />} />
+                  {renderBufferStackedBars(activeData.bufferPenetrationStackedData, 'bpr_stacked_summary')}
                   <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
                 </BarChart>
               </ResponsiveContainer>
@@ -905,41 +1230,41 @@ export function BprPage({ filters, onChange }: BprPageProps) {
               />
 
               {/* Rings & Info Side-by-Side */}
-              <div className="flex items-center justify-around py-4">
+              <div className="flex items-center justify-between gap-6 py-4 px-2">
                 {/* Concentric rings */}
-                <div className="relative w-[110px] h-[110px] shrink-0">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="55" cy="55" r={R_bpr_1} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_bpr_2} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_bpr_3} fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-                    <circle cx="55" cy="55" r={R_bpr_1} fill="transparent" stroke={q1Data.isWarning ? T.red : T.amber} strokeWidth="5" strokeDasharray={C_bpr_1} strokeDashoffset={q1Data.dashoffsetAvail} strokeLinecap="round" />
-                    <circle cx="55" cy="55" r={R_bpr_2} fill="transparent" stroke={T.green} strokeWidth="5" strokeDasharray={C_bpr_2} strokeDashoffset={q1Data.dashoffsetPerf} strokeLinecap="round" />
-                    <circle cx="55" cy="55" r={R_bpr_3} fill="transparent" stroke={T.blue} strokeWidth="5" strokeDasharray={C_bpr_3} strokeDashoffset={q1Data.dashoffsetQual} strokeLinecap="round" />
+                <div className="relative w-28 h-28 sm:w-34 sm:h-34 shrink-0 flex items-center justify-center">
+                  <svg viewBox="0 0 120 120" className="w-full h-full transform -rotate-90">
+                    <circle cx="60" cy="60" r={R_bpr_1} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_bpr_2} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_bpr_3} fill="transparent" stroke="#F1F5F9" strokeWidth="4" />
+                    <circle cx="60" cy="60" r={R_bpr_1} fill="transparent" stroke={q1Data.isWarning ? T.red : T.amber} strokeWidth="4" strokeDasharray={C_bpr_1} strokeDashoffset={C_bpr_1 * (1 - Math.min(100, q1Data.penetrationIndex) / 100)} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+                    <circle cx="60" cy="60" r={R_bpr_2} fill="transparent" stroke={T.green} strokeWidth="4" strokeDasharray={C_bpr_2} strokeDashoffset={C_bpr_2 * (1 - Math.min(100, q1Data.supplierAdherence) / 100)} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+                    <circle cx="60" cy="60" r={R_bpr_3} fill="transparent" stroke={T.blue} strokeWidth="4" strokeDasharray={C_bpr_3} strokeDashoffset={C_bpr_3 * (1 - Math.min(100, q1Data.demandAdherence) / 100)} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
                   </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                    <span className="text-sm font-black text-slate-800" style={{ color: q1Data.isWarning ? T.red : 'inherit' }}>{q1Data.penetrationIndex.toFixed(1)}%</span>
-                    <span className="text-[6px] text-slate-400 font-bold uppercase tracking-wider">Index</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                    <span className="text-sm sm:text-base font-black text-slate-800 tracking-tight leading-none" style={{ color: q1Data.isWarning ? T.red : 'inherit' }}>{q1Data.penetrationIndex.toFixed(1)}%</span>
+                    <span className="text-[7.5px] text-slate-400 font-extrabold uppercase tracking-widest mt-1">Index</span>
                   </div>
                 </div>
 
                 {/* Vertical detail ledger */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: q1Data.isWarning ? T.red : T.amber }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: q1Data.isWarning ? T.red : T.amber }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">Avg Buffer Penetration</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{q1Data.penetrationIndex.toFixed(1)}% <span className="text-[8px] text-slate-400 font-normal">/ 95% target</span></p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: T.green }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: T.green }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">Supplier Adherence</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{q1Data.supplierAdherence.toFixed(1)}% <span className="text-[8px] text-slate-400 font-normal">/ 95% target</span></p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: T.blue }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: T.blue }} />
                     <div>
                       <p className="text-[7.5px] font-black text-slate-400 uppercase leading-none">Demand Adherence</p>
                       <p className="text-xs font-black text-slate-700 mt-0.5">{q1Data.demandAdherence.toFixed(1)}% <span className="text-[8px] text-slate-400 font-normal">/ 98% target</span></p>
@@ -1015,13 +1340,91 @@ export function BprPage({ filters, onChange }: BprPageProps) {
               <div className="h-[180px] w-full mt-4">
                 {isMtdWtd(q2Lock.effectiveFilters) ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={q2PromisedActualData} barCategoryGap="25%" margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
+                    <BarChart data={q2PromisedActualData} barCategoryGap="20%" margin={{ top: 10, right: 15, left: -25, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                       <XAxis dataKey="supplier" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 8, fill: '#64748B' }} unit="d" axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={T.tt} />
-                      <Bar dataKey="promised" name="Promised LT" fill="#4988C4" radius={[3, 3, 0, 0]} maxBarSize={32} />
-                      <Bar dataKey="actual" name="Actual LT" fill="#FFAE6E" radius={[3, 3, 0, 0]} maxBarSize={32} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar
+                        dataKey="promised"
+                        name="Promised LT"
+                        fill="url(#cyanBlueGrad)"
+                        isAnimationActive={true}
+                        animationDuration={1200}
+                        animationEasing="ease-out"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={30}
+                      >
+                        {q2PromisedActualData.map((entry: any, index: number) => {
+                          const isActive = hoveredBar?.chartId === 'leadtime_promised' && hoveredBar?.index === index;
+                          const isAnyActive = hoveredBar?.chartId === 'leadtime_promised';
+                          const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                          return (
+                            <Cell
+                              key={`cell-promised-${index}`}
+                              fill="url(#cyanBlueGrad)"
+                              opacity={opacity}
+                              onMouseEnter={() => setHoveredBar({ chartId: 'leadtime_promised', index })}
+                              onMouseLeave={() => setHoveredBar(null)}
+                              style={{
+                                transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                transformOrigin: 'bottom center',
+                                filter: isActive ? 'drop-shadow(0 0 6px #0EA5E9)' : 'none',
+                                transition: 'all 0.2s ease',
+                                cursor: 'pointer'
+                              }}
+                            />
+                          );
+                        })}
+                        <LabelList
+                          dataKey="promised"
+                          position="top"
+                          formatter={(v: number) => `${v}d`}
+                          fontSize={8}
+                          fontWeight={700}
+                          fill="#475569"
+                        />
+                      </Bar>
+                      <Bar
+                        dataKey="actual"
+                        name="Actual LT"
+                        fill="url(#orangeGrad)"
+                        isAnimationActive={true}
+                        animationDuration={1200}
+                        animationEasing="ease-out"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={30}
+                      >
+                        {q2PromisedActualData.map((entry: any, index: number) => {
+                          const isActive = hoveredBar?.chartId === 'leadtime_actual' && hoveredBar?.index === index;
+                          const isAnyActive = hoveredBar?.chartId === 'leadtime_actual';
+                          const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                          return (
+                            <Cell
+                              key={`cell-actual-${index}`}
+                              fill="url(#orangeGrad)"
+                              opacity={opacity}
+                              onMouseEnter={() => setHoveredBar({ chartId: 'leadtime_actual', index })}
+                              onMouseLeave={() => setHoveredBar(null)}
+                              style={{
+                                transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                                transformOrigin: 'bottom center',
+                                filter: isActive ? 'drop-shadow(0 0 6px #0EA5E9)' : 'none',
+                                transition: 'all 0.2s ease',
+                                cursor: 'pointer'
+                              }}
+                            />
+                          );
+                        })}
+                        <LabelList
+                          dataKey="actual"
+                          position="top"
+                          formatter={(v: number) => `${v}d`}
+                          fontSize={8}
+                          fontWeight={700}
+                          fill="#475569"
+                        />
+                      </Bar>
                       <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -1031,7 +1434,7 @@ export function BprPage({ filters, onChange }: BprPageProps) {
                       <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
                       <XAxis dataKey="volatility" name="Volatility (Cv)" unit="%" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} type="number" axisLine={false} tickLine={false} />
                       <YAxis dataKey="leadTime" name="Lead Time" unit="d" tick={{ fontSize: 8, fill: '#64748B' }} type="number" axisLine={false} tickLine={false} />
-                      <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={T.tt} />
+                      <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
                       <ReferenceArea x1={20} y1={10} fill="#F59E0B" fillOpacity={0.1} stroke="#F59E0B" strokeDasharray="3 3" />
                       <ReferenceLine x={20} stroke="#94A3B8" strokeDasharray="3 3" />
                       <ReferenceLine y={10} stroke="#94A3B8" strokeDasharray="3 3" />
@@ -1071,13 +1474,53 @@ export function BprPage({ filters, onChange }: BprPageProps) {
               />
               <div className="h-[180px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={q3AdherenceDataWithVolume} barCategoryGap="25%" margin={{ top: 10, right: -5, left: -25, bottom: 5 }}>
+                  <ComposedChart data={q3AdherenceDataWithVolume} barCategoryGap="20%" margin={{ top: 10, right: -5, left: -25, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} />
                     <YAxis yAxisId="left" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} />
                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 8, fill: '#64748B' }} axisLine={false} tickLine={false} domain={[50, 100]} />
-                    <Tooltip contentStyle={T.tt} />
-                    <Bar yAxisId="left" dataKey="ordersDispatched" name="Total Orders" fill="#4988C4" radius={[3, 3, 0, 0]} maxBarSize={32} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar
+                      yAxisId="left"
+                      dataKey="ordersDispatched"
+                      name="Total Orders"
+                      fill="url(#cyanBlueGrad)"
+                      isAnimationActive={true}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={30}
+                    >
+                      {q3AdherenceDataWithVolume.map((entry: any, index: number) => {
+                        const isActive = hoveredBar?.chartId === 'q3_adherence_disp' && hoveredBar?.index === index;
+                        const isAnyActive = hoveredBar?.chartId === 'q3_adherence_disp';
+                        const opacity = isAnyActive ? (isActive ? 1 : 0.5) : 1;
+                        return (
+                          <Cell
+                            key={`cell-q3-disp-${index}`}
+                            fill="url(#cyanBlueGrad)"
+                            opacity={opacity}
+                            onMouseEnter={() => setHoveredBar({ chartId: 'q3_adherence_disp', index })}
+                            onMouseLeave={() => setHoveredBar(null)}
+                            style={{
+                              transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                              transformOrigin: 'bottom center',
+                              filter: isActive ? 'drop-shadow(0 0 6px #0EA5E9)' : 'none',
+                              transition: 'all 0.2s ease',
+                              cursor: 'pointer'
+                            }}
+                          />
+                        );
+                      })}
+                      <LabelList
+                        dataKey="ordersDispatched"
+                        position="top"
+                        formatter={(v: number) => Math.round(v).toLocaleString()}
+                        fontSize={8}
+                        fontWeight={700}
+                        fill="#475569"
+                      />
+                    </Bar>
                     <Line 
                       yAxisId="right"
                       type="monotone" 
@@ -1148,7 +1591,7 @@ export function BprPage({ filters, onChange }: BprPageProps) {
                             <Cell key={`cell-${index}`} fill={entry.color} cursor="pointer" />
                           ))}
                         </Pie>
-                        <Tooltip contentStyle={T.tt} formatter={(value) => [`${value}%`]} />
+                        <Tooltip content={<CustomTooltip formatter={(value: any) => [`${value}%`]} />} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute flex flex-col items-center justify-center pointer-events-none">
@@ -1159,11 +1602,11 @@ export function BprPage({ filters, onChange }: BprPageProps) {
                 ) : (
                   <div className="h-[180px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={q4Data.bufferPenetrationStackedData} barCategoryGap="25%" margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
+                      <BarChart data={q4Data.bufferPenetrationStackedData} barCategoryGap="20%" margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 800 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 8, fill: T.mutedColor }} tickFormatter={(v) => `${v}%`} axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={T.tt} formatter={(value: number) => [`${value}%`]} />
+                        <Tooltip content={<CustomTooltip formatter={(value: number) => [`${value}%`]} />} />
                         <Bar dataKey="critical" name="Critical Stockout" stackId="a" fill="#EF4444" maxBarSize={32} />
                         <Bar dataKey="warning" name="Warning/Reorder" stackId="a" fill="#F59E0B" maxBarSize={32} />
                         <Bar dataKey="optimal" name="Optimal/Safe" stackId="a" fill="#10B981" maxBarSize={32} />

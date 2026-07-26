@@ -16,7 +16,7 @@ export interface FilterState {
   selectedDate: Date;
   opSections: {
     premachining: boolean;
-    machining: boolean;
+    // machining: boolean;
     postMachining: boolean;
   };
   sidebarPeriodSelected?: boolean;
@@ -353,7 +353,7 @@ export function useDefaultFilters(): FilterState {
     selectedDate: new Date(),
     opSections: {
       premachining: true,
-      machining: true,
+      // machining: true,
       postMachining: true,
     },
     sidebarPeriodSelected: false

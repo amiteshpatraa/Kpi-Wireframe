@@ -1,4 +1,4 @@
-import { PeriodId, ProductId, getTimeLabels } from './types';
+import { PeriodId, ProductId, getTimeLabels, isSundayMtd } from './types';
 
 export function resolveOeeData(period: PeriodId, product: ProductId, process: string): any {
   const tLabels = getTimeLabels(period);
@@ -56,27 +56,10 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
   let monthlyPerformance: any[] = [];
   let monthlyQuality: any[] = [];
 
-  if (period === 'YoY') {
-    monthlyAvailability = tLabels.map((name, i) => {
-      const rawAvail = 78.0 + 7.0 * (i / 15) + (i < 15 ? Math.sin(i) * 1.5 : 0);
-      return { name, avg_avail: +(rawAvail * scale).toFixed(1), downtime: Math.round((100 - rawAvail) * 0.2) };
-    });
-    monthlyPerformance = tLabels.map((name, i) => {
-      const rawPerf = 82.0 + 8.0 * (i / 15) + (i < 15 ? Math.cos(i) * 1.5 : 0);
-      return { name, actualVolume: Math.round(1200 * (rawPerf / 100)), avg_perf: +(rawPerf * scale).toFixed(1) };
-    });
-    monthlyQuality = tLabels.map((name, i) => {
-      const rawQual = 90.7 + 7.3 * (i / 15) + (i < 15 ? Math.sin(i * 1.5) * 1.0 : 0);
-      return { name, avg_fpy: +(rawQual * scale).toFixed(1), scrapPct: 1.2 };
-    });
-  } else if (period === 'QTD') {
-    const ytdAvails = [84.5, 87.2, 81.0, 89.5, 85.8, 88.4, 86.5];
-    const ytdPerfs  = [91.0, 93.5, 86.4, 94.0, 90.2, 92.5, 91.0];
-    const ytdQuals  = [92.6, 96.3, 91.6, 96.6, 95.4, 97.1, 95.3];
-
-    const qtdAvails = ytdAvails.slice(3);
-    const qtdPerfs  = ytdPerfs.slice(3);
-    const qtdQuals  = ytdQuals.slice(3);
+  if (period === 'QTD') {
+    const qtdAvails = [89.5, 85.8, 88.4, 86.5];
+    const qtdPerfs  = [94.0, 90.2, 92.5, 91.0];
+    const qtdQuals  = [96.6, 95.4, 97.1, 95.3];
 
     monthlyAvailability = tLabels.map((name, i) => {
       const uptime = qtdAvails[i] || 82;
@@ -124,20 +107,20 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
       return { name, avg_fpy: +(fpy * scale).toFixed(1), scrapPct: 1.2 };
     });
   } else {
-    const ytdAvails = [84.5, 87.2, 81.0, 89.5, 85.8, 88.4, 86.5];
-    const ytdPerfs  = [91.0, 93.5, 86.4, 94.0, 90.2, 92.5, 91.0];
-    const ytdQuals  = [92.6, 96.3, 91.6, 96.6, 95.4, 97.1, 95.3];
+    const ytdAvails = [89.5, 85.8, 88.4, 86.5];
+    const ytdPerfs  = [94.0, 90.2, 92.5, 91.0];
+    const ytdQuals  = [96.6, 95.4, 97.1, 95.3];
 
     monthlyAvailability = tLabels.map((name, i) => {
-      const uptime = ytdAvails[i % 7];
+      const uptime = ytdAvails[i % 4];
       return { name, avg_avail: +(uptime * scale).toFixed(1), downtime: Math.round((100 - uptime) * 0.2) };
     });
     monthlyPerformance = tLabels.map((name, i) => {
-      const rate = ytdPerfs[i % 7];
+      const rate = ytdPerfs[i % 4];
       return { name, actualVolume: Math.round(1200 * (rate / 100)), avg_perf: +(rate * scale).toFixed(1) };
     });
     monthlyQuality = tLabels.map((name, i) => {
-      const fpy = ytdQuals[i % 7];
+      const fpy = ytdQuals[i % 4];
       return { name, avg_fpy: +(fpy * scale).toFixed(1), scrapPct: 1.2 };
     });
   }
@@ -187,16 +170,11 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
     let planned = 250;
     let rework = 10;
 
-    if (period === 'YoY') {
-      const plans = [200, 220, 250, 280, 310, 360, 400, 450, 470, 490, 500, 520, 540, 560, 580, 600];
-      const reworks = [120, 110, 100, 90, 85, 75, 70, 60, 55, 50, 45, 38, 32, 26, 20, 15];
-      planned = plans[i % plans.length];
-      rework = reworks[i % reworks.length];
-    } else if (period === 'QTD') {
+    if (period === 'QTD') {
       const plans = [60, 52, 58, 55];
       const reworks = [14, 8, 10, 8];
-      planned = plans[i % plans.length];
-      rework = reworks[i % reworks.length];
+      planned = plans[i % 4];
+      rework = reworks[i % 4];
     } else if (period === 'MTD') {
       const day = i + 1;
       if (day === 12) {
@@ -210,10 +188,10 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
       planned = [18, 22, 19, 21, 20][i % 5];
       rework = [2, 3, 1, 4, 2][i % 5];
     } else {
-      const plans = [50, 55, 48, 60, 52, 58, 55];
-      const reworks = [8, 12, 6, 14, 8, 10, 8];
-      planned = plans[i % plans.length];
-      rework = reworks[i % reworks.length];
+      const plans = [60, 52, 58, 55];
+      const reworks = [14, 8, 10, 8];
+      planned = plans[i % 4];
+      rework = reworks[i % 4];
     }
 
     const scale = isLW1 ? 1.2 : (isVMC1 ? 0.9 : 1.0);
@@ -230,22 +208,14 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
     let blowHoles = 5;
     let gaps = 3;
 
-    if (period === 'YoY') {
-      const burrsList = [300, 280, 250, 210, 180, 150, 130, 110, 90, 75, 58, 42, 32, 22, 15, 12];
-      const blowList  = [150, 130, 110, 100, 90,  75,  60,  50,  40, 35, 28, 22, 16, 11, 8,  5];
-      const gapsList  = [80,  70,  60,  50,  40,  35,  30,  25,  20, 18, 15, 12, 9,  6,  4,  3];
-
-      burrs = burrsList[i % burrsList.length];
-      blowHoles = blowList[i % blowList.length];
-      gaps = gapsList[i % gapsList.length];
-    } else if (period === 'QTD') {
+    if (period === 'QTD') {
       const burrsList = [10, 14, 11, 12];
       const blowList  = [4, 7, 5, 5];
       const gapsList  = [2, 3, 2, 3];
 
-      burrs = burrsList[i % burrsList.length];
-      blowHoles = blowList[i % blowList.length];
-      gaps = gapsList[i % gapsList.length];
+      burrs = burrsList[i % 4];
+      blowHoles = blowList[i % 4];
+      gaps = gapsList[i % 4];
     } else if (period === 'MTD') {
       const day = i + 1;
       if (day === 12) {
@@ -262,13 +232,13 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
       blowHoles = [0, 1, 0, 1, 0][i % 5];
       gaps = [0, 0, 1, 0, 0][i % 5];
     } else {
-      const burrsList = [15, 12, 18, 10, 14, 11, 12];
-      const blowList  = [8,  5,  10, 4,  7,  5,  5];
-      const gapsList  = [4,  3,  5,  2,  3,  2,  3];
+      const burrsList = [10, 14, 11, 12];
+      const blowList  = [4, 7, 5, 5];
+      const gapsList  = [2, 3, 2, 3];
 
-      burrs = burrsList[i % burrsList.length];
-      blowHoles = blowList[i % blowList.length];
-      gaps = gapsList[i % gapsList.length];
+      burrs = burrsList[i % 4];
+      blowHoles = blowList[i % 4];
+      gaps = gapsList[i % 4];
     }
 
     const scale = isLW1 ? 1.3 : (isVMC1 ? 0.8 : 1.0);
@@ -280,6 +250,23 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
       value: Math.round((burrs + blowHoles + gaps) * scale)
     };
   });
+
+  if (period === 'MTD') {
+    for (let i = 0; i < tLabels.length; i++) {
+      if (isSundayMtd(period, i)) {
+        if (monthlyAvailability[i]) monthlyAvailability[i] = { name: monthlyAvailability[i].name, avg_avail: 0, downtime: 0 };
+        if (monthlyPerformance[i]) monthlyPerformance[i] = { name: monthlyPerformance[i].name, actualVolume: 0, avg_perf: 0 };
+        if (monthlyQuality[i]) monthlyQuality[i] = { name: monthlyQuality[i].name, avg_fpy: 0, scrapPct: 0 };
+        if (monthlyOee[i]) monthlyOee[i] = { name: monthlyOee[i].name, value: 0 };
+        if (setupPmMonthlyData[i]) setupPmMonthlyData[i] = { name: setupPmMonthlyData[i].name, planned: 0, actual: 0 };
+        if (unplannedDowntimeTrendData[i]) unplannedDowntimeTrendData[i] = { name: unplannedDowntimeTrendData[i].name, breakdown: 0, mttr: 0, mtbf: 0 };
+        if (cycleTaktStationData[i]) cycleTaktStationData[i] = { name: cycleTaktStationData[i].name, setup: 0, processing: 0, limit: 45 };
+        if (monthlyOutputPerManData[i]) monthlyOutputPerManData[i] = { name: monthlyOutputPerManData[i].name, actual: 0 };
+        if (monthlyReworkData[i]) monthlyReworkData[i] = { name: monthlyReworkData[i].name, planned: 0, rework: 0, value: 0 };
+        if (monthlyInHouseRejectionsData[i]) monthlyInHouseRejectionsData[i] = { name: monthlyInHouseRejectionsData[i].name, burrs: 0, blowHoles: 0, gaps: 0, value: 0 };
+      }
+    }
+  }
 
   const targetValue = isLW1 ? 70 : (product === 'MATRIX' ? 85 : (product === 'BANANA' ? 75 : 80));
 
@@ -309,6 +296,146 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
     icon: 'Clock',
     gradient: ['#2563EB', '#1D4ED8'],
     trackWash: 'rgba(37,99,235,0.05)',
-    glowShadow: 'rgba(37,99,235,0.2)'
+    glowShadow: 'rgba(37,99,235,0.2)',
+    stationsList: STATIONS_LIST,
+    monthlyMachineDefects: MONTHLY_MACHINE_DEFECTS
   };
 }
+
+export const PILLARS = [
+  {
+    id: 'OEE' as const,
+    label: 'OEE Overview',
+    value: 67,
+    target: 80,
+    color: '#6366F1',
+  },
+  {
+    id: 'AVAILABILITY' as const,
+    label: 'Availability Index',
+    value: 85,
+    target: 85,
+    color: '#00B574',
+  },
+  {
+    id: 'PERFORMANCE' as const,
+    label: 'Performance Index',
+    value: 80,
+    target: 80,
+    color: '#FFA000',
+  },
+  {
+    id: 'QUALITY' as const,
+    label: 'Quality Index',
+    value: 99,
+    target: 99,
+    color: '#F5788B',
+  },
+] as const;
+
+export type ActivePillar = typeof PILLARS[number]['id'] | null;
+
+export const STATIONS_LIST = [
+  { name: 'UC01', type: 'auto', limit: 33 }, { name: 'SPFL', type: 'auto', limit: 33 },
+  { name: 'LW01', type: 'auto', limit: 33 }, { name: 'CLNC', type: 'auto', limit: 33 },
+  { name: 'LW02', type: 'auto', limit: 33 }, { name: 'LW03', type: 'auto', limit: 33 },
+  { name: 'BRZN', type: 'auto', limit: 33 }, { name: 'VMC1', type: 'auto', limit: 33 },
+  { name: 'VMC2', type: 'auto', limit: 33 }, { name: 'UC02', type: 'auto', limit: 33 },
+  { name: 'EOL', type: 'manual', limit: 45 }, { name: 'PACK', type: 'manual', limit: 45 },
+  { name: 'ALT1', type: 'manual', limit: 45 }, { name: 'LW04', type: 'manual', limit: 45 },
+  { name: 'VMC3', type: 'manual', limit: 45 }, { name: 'UC03', type: 'manual', limit: 45 },
+];
+
+export const MONTHLY_MACHINE_DEFECTS: Record<string, { machine: string; defects: number }[]> = {
+  Jan: [{ machine: 'MCH-029', defects: 35 }, { machine: 'MCH-052', defects: 15 }],
+  Feb: [{ machine: 'MCH-029', defects: 42 }, { machine: 'MCH-052', defects: 18 }],
+  Mar: [{ machine: 'MCH-029', defects: 38 }, { machine: 'MCH-052', defects: 12 }],
+  Apr: [{ machine: 'MCH-029', defects: 55 }, { machine: 'MCH-052', defects: 25 }],
+  May: [{ machine: 'MCH-029', defects: 48 }, { machine: 'MCH-052', defects: 30 }],
+  Jun: [{ machine: 'MCH-029', defects: 65 }, { machine: 'MCH-052', defects: 42 }, { machine: 'MCH-070', defects: 18 }],
+  Jul: [{ machine: 'MCH-029', defects: 58 }, { machine: 'MCH-052', defects: 38 }],
+  Aug: [{ machine: 'MCH-029', defects: 50 }, { machine: 'MCH-052', defects: 28 }],
+  Sep: [{ machine: 'MCH-029', defects: 78 }, { machine: 'MCH-052', defects: 44 }, { machine: 'MCH-070', defects: 22 }],
+  Oct: [{ machine: 'MCH-029', defects: 45 }, { machine: 'MCH-052', defects: 20 }],
+  Nov: [{ machine: 'MCH-029', defects: 39 }, { machine: 'MCH-052', defects: 16 }],
+  Dec: [{ machine: 'MCH-029', defects: 41 }, { machine: 'MCH-052', defects: 18 }],
+};
+
+export interface MachineStationConfig {
+  name: string;
+  section: 'premachining' | 'postMachining';
+  baseAvail: number;
+  basePerf: number;
+  baseQual: number;
+}
+
+export const MACHINE_STATIONS: MachineStationConfig[] = [
+  { name: 'UC01', section: 'premachining', baseAvail: 88, basePerf: 84, baseQual: 98 },
+  { name: 'SPFL', section: 'premachining', baseAvail: 86, basePerf: 82, baseQual: 99 },
+  { name: 'LW01', section: 'premachining', baseAvail: 89, basePerf: 85, baseQual: 98 },
+  { name: 'CLNC', section: 'premachining', baseAvail: 92, basePerf: 87, baseQual: 99 },
+  { name: 'LW02', section: 'premachining', baseAvail: 82, basePerf: 78, baseQual: 97 },
+  { name: 'LW03', section: 'premachining', baseAvail: 84, basePerf: 80, baseQual: 98 },
+  { name: 'BRZN', section: 'premachining', baseAvail: 87, basePerf: 83, baseQual: 99 },
+  { name: 'VMC1', section: 'premachining', baseAvail: 85, basePerf: 81, baseQual: 97 },
+  { name: 'VMC2', section: 'postMachining', baseAvail: 83, basePerf: 79, baseQual: 96 },
+  { name: 'UC02', section: 'postMachining', baseAvail: 84, basePerf: 82, baseQual: 98 },
+  { name: 'EOL', section: 'postMachining', baseAvail: 94, basePerf: 90, baseQual: 99 },
+  { name: 'PACK', section: 'postMachining', baseAvail: 91, basePerf: 88, baseQual: 97 },
+  { name: 'ALT1', section: 'postMachining', baseAvail: 93, basePerf: 89, baseQual: 99 },
+  { name: 'LW04', section: 'postMachining', baseAvail: 92, basePerf: 87, baseQual: 98 },
+  { name: 'VMC3', section: 'postMachining', baseAvail: 88, basePerf: 85, baseQual: 96 },
+  { name: 'UC03', section: 'postMachining', baseAvail: 89, basePerf: 86, baseQual: 97 },
+];
+
+export function resolveMachineOeeData(filters: {
+  opSections?: { premachining?: boolean; postMachining?: boolean };
+  shift?: string;
+  plant?: string;
+  trend?: string;
+}) {
+  const filteredStations = MACHINE_STATIONS.filter((st) => {
+    if (!filters.opSections) return true;
+    if (st.section === 'premachining' && !filters.opSections.premachining) return false;
+    if (st.section === 'postMachining' && !filters.opSections.postMachining) return false;
+    return true;
+  });
+
+  let shiftSeed = 0;
+  if (filters.shift === 'Shift A') shiftSeed = 1.2;
+  if (filters.shift === 'Shift B') shiftSeed = -0.8;
+  if (filters.shift === 'Shift C') shiftSeed = -2.1;
+
+  let plantSeed = 0;
+  if (filters.plant && filters.plant !== 'All Plants') {
+    let hash = 0;
+    for (let i = 0; i < filters.plant.length; i++) hash += filters.plant.charCodeAt(i);
+    plantSeed = (hash % 5) - 2;
+  }
+
+  let periodSeed = 0;
+  if (filters.trend === 'year') periodSeed = 1.5;
+  if (filters.trend === 'quarter') periodSeed = -0.5;
+  if (filters.trend === 'week') periodSeed = 2.2;
+
+  return filteredStations.map((st) => {
+    const idx = st.name.charCodeAt(0) + st.name.charCodeAt(1);
+    const randomOffset = Math.sin(idx) * 2;
+
+    const availability = Math.min(100, Math.max(50, +(st.baseAvail + shiftSeed + plantSeed + periodSeed + randomOffset).toFixed(1)));
+    const performance = Math.min(100, Math.max(50, +(st.basePerf + shiftSeed * 0.8 + plantSeed * 1.2 + periodSeed * 0.5 + randomOffset * 0.7).toFixed(1)));
+    const quality = Math.min(100, Math.max(50, +(st.baseQual + shiftSeed * 0.2 + plantSeed * 0.4 + periodSeed * 0.1 + randomOffset * 0.3).toFixed(1)));
+
+    const oee = +((availability * performance * quality) / 10000).toFixed(1);
+
+    return {
+      name: st.name,
+      uptime: availability,
+      actualVolume: performance,
+      yieldPass: quality,
+      overallOee: oee,
+      capacity: 100,
+    };
+  });
+}
+

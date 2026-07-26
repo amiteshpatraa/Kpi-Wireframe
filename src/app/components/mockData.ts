@@ -8,7 +8,7 @@ export interface FilterState extends BaseFilterState {
   process?: string;
   opSections?: {
     premachining: boolean;
-    machining: boolean;
+    // machining: boolean;
     postMachining: boolean;
   };
 }

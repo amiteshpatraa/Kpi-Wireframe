@@ -103,6 +103,14 @@ export function FilterTagPills({ filters, showBaseline = false }: FilterTagPills
   if (line && line !== 'All Lines') {
     pills.push({ label: line, category: 'period' });
   }
+// Sections
+  if (filters.opSections) {
+    if (filters.opSections.premachining && !filters.opSections.postMachining) {
+      pills.push({ label: '[Section: Premachining]', category: 'process' });
+    } else if (filters.opSections.postMachining && !filters.opSections.premachining) {
+      pills.push({ label: '[Section: Assembly]', category: 'process' });
+    }
+  }
 
   if (pills.length === 0) {
     if (!showBaseline) return null;
