@@ -121,7 +121,12 @@ function getCopqProfile(filters: FilterState) {
 function getTimeLabels(filters: FilterState) {
   const trend = filters.trend;
   if (trend === 'quarter') return ['Apr', 'May', 'Jun', 'Jul'];
-  if (trend === 'month')   return Array.from({ length: 31 }, (_, i) => String(i + 1));
+  if (trend === 'month') {
+    const SUNDAYS = [7, 14, 21, 28];
+    return Array.from({ length: 31 }, (_, i) => i + 1)
+      .filter(d => !SUNDAYS.includes(d))
+      .map(d => String(d));
+  }
   if (trend === 'week')    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   return ['Apr', 'May', 'Jun', 'Jul'];
 }

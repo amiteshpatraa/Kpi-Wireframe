@@ -1,4 +1,4 @@
-import { PeriodId, ProductId, getTimeLabels, isSundayMtd } from './types';
+import { PeriodId, ProductId, getTimeLabels } from './types';
 
 export interface ThreadNode {
   id: string;
@@ -225,47 +225,6 @@ export function resolveTraceabilityData(period: PeriodId, product: ProductId, pr
       completeness: Math.min(100, completeness),
     };
   });
-
-  if (period === 'MTD') {
-    for (let i = 0; i < tLabels.length; i++) {
-      if (isSundayMtd(period, i)) {
-        if (complianceTrend[i]) {
-          complianceTrend[i] = {
-            name: complianceTrend[i].name,
-            value: 0,
-            target: 99.9
-          };
-        }
-        if (serializationScans[i]) {
-          serializationScans[i] = {
-            name: serializationScans[i].name,
-            value: 0,
-            target: 1000
-          };
-        }
-        if (complianceRadar[i]) {
-          complianceRadar[i] = {
-            month: complianceRadar[i].month,
-            risk: 0,
-            target: 0.5
-          };
-        }
-        if (scanData[i]) {
-          scanData[i] = {
-            name: scanData[i].name,
-            attempts: 0,
-            successes: 0
-          };
-        }
-        if (genealogyData[i]) {
-          genealogyData[i] = {
-            name: genealogyData[i].name,
-            completeness: 0
-          };
-        }
-      }
-    }
-  }
 
   return {
     complianceIndex,

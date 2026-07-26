@@ -26,11 +26,11 @@ const inventoryYtdData = [
   { name: 'Jul', value: 1192 }
 ];
 
-const copqYtdData = [
-  { name: 'Apr', value: 5290000 },
-  { name: 'May', value: 2560000 },
-  { name: 'Jun', value: 3880000 },
-  { name: 'Jul', value: 3520000 }
+const biqYtdData = [
+  { name: 'Apr', value: 94.2 },
+  { name: 'May', value: 93.8 },
+  { name: 'Jun', value: 95.1 },
+  { name: 'Jul', value: 94.7 }
 ];
 
 const rawMaterialYtdData = [
@@ -58,7 +58,7 @@ const traceabilityYtdData = [
 const radarCoords: Record<number, { top: number; left: number }> = {
   1: { top: 38, left: 26 }, // OEE Performance Index -> CNC Line (top-left production area)
   2: { top: 23, left: 52 }, // Inventory Pipeline Integrity -> Warehouse (top-center storage racks)
-  3: { top: 80, left: 16 }, // COPQ -> Inspection (bottom-left area)
+  3: { top: 80, left: 16 }, // BIQ -> Inspection (bottom-left area)
   4: { top: 60, left: 50 }, // Raw Material Coverage -> Assembly (bottom-center area)
   5: { top: 33, left: 72 }, // OTIF Delivery -> Shipping Docks (top-right area)
   6: { top: 75, left: 75 }, // Traceability -> Material Flow (bottom-right area)
@@ -68,7 +68,7 @@ const radarCoords: Record<number, { top: number; left: number }> = {
 const cardAnchors: Record<number, { left: number; top: number }> = {
   1: { left: 30, top: 25 }, // OEE card bottom-center
   2: { left: 53, top: 21 }, // Inventory card bottom-center
-  3: { left: 18, top: 70 }, // COPQ card right-center
+  3: { left: 18, top: 70 }, // BIQ card right-center
   4: { left: 47, top: 72 }, // BPR card top-center
   5: { left: 78, top: 25 }, // OTIF card bottom-left
   6: { left: 79, top: 81 }, // Traceability card left-center
@@ -78,7 +78,7 @@ const cardAnchors: Record<number, { left: number; top: number }> = {
 const cardCoords: Record<number, { top: number; left: number; width: number }> = {
   1: { top: 12, left: 22, width: 16.5 }, // OEE Card
   2: { top: 8, left: 45, width: 16.5 }, // Inventory Card
-  3: { top: 55, left: 2, width: 16.5 }, // COPQ Card
+  3: { top: 55, left: 2, width: 16.5 }, // BIQ Card
   4: { top: 65, left: 39, width: 16.5 }, // BPR Card
   5: { top: 12, left: 76, width: 16.5 }, // OTIF Card
   6: { top: 67, left: 79, width: 16.5 }, // Traceability Card
@@ -175,40 +175,43 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const isSectionOee = card.id === 101 || card.id === 102;
-  const isSectionCopq = card.id === 103 || card.id === 104;
-
-  const yTicks = isSectionCopq
-    ? [0, 5, 10, 15, 20, 25, 30]
-    : (card.id === 3
-      ? [0, 1000000, 2000000, 3000000, 4000000, 5000000, 6000000]
-      : (card.id === 2 ? [0, 500, 1000, 1500, 2000] : (card.id === 4 ? [0, 25, 50, 75, 100] : [0, 25, 50, 75, 100])));
-  
-  const yDomain = isSectionCopq
-    ? [0, 30]
-    : (card.id === 3
-      ? [0, 6000000]
-      : (card.id === 2 ? [0, 2000] : (card.id === 4 ? [0, 100] : [0, 100])));
-
-  const tickFormatter = (v: any) => {
-    if (isSectionCopq) return `₹${v} L`;
-    if (isSectionOee || card.id === 1 || card.id === 6 || card.id === 5) return `${v}%`;
-    if (card.id === 3) return v === 0 ? '₹0' : `₹${v / 100000} L`;
-    if (card.id === 2) return v.toLocaleString();
-    if (card.id === 4) return `${v}%`;
-    return v;
-  };
+  const isSectionBiq  = card.id === 103 || card.id === 104;
 
   const getCardCategory = (card: any) => {
-    if (card.id === 1 || card.title.toLowerCase().includes('oee') || card.classification.toLowerCase().includes('performance')) return 'oee';
-    if (card.id === 2 || card.title.toLowerCase().includes('inventory') || card.classification.toLowerCase().includes('wip')) return 'inventory';
-    if (card.id === 3 || card.title.toLowerCase().includes('copq') || card.classification.toLowerCase().includes('loss')) return 'copq';
-    if (card.id === 4 || card.title.toLowerCase().includes('bpr') || card.title.toLowerCase().includes('coverage') || card.classification.toLowerCase().includes('buffer') || card.classification.toLowerCase().includes('purchase')) return 'bpr';
-    if (card.id === 5 || card.title.toLowerCase().includes('otif') || card.classification.toLowerCase().includes('adherence') || card.classification.toLowerCase().includes('delivery')) return 'otif';
-    if (card.id === 6 || card.title.toLowerCase().includes('traceability') || card.title.toLowerCase().includes('serialization') || card.classification.toLowerCase().includes('scan') || card.classification.toLowerCase().includes('trace')) return 'traceability';
+    const title = card.title.toLowerCase();
+    const classification = card.classification.toLowerCase();
+    if (card.id === 1 || title.includes('oee') || classification.includes('performance')) return 'oee';
+    if (card.id === 2 || title.includes('inventory') || classification.includes('wip')) return 'inventory';
+    if (card.id === 3 || title.includes('biq') || classification.includes('quality')) return 'biq';
+    if (title.includes('copq') || classification.includes('loss')) return 'copq';
+    if (card.id === 4 || title.includes('bpr') || title.includes('coverage') || classification.includes('buffer') || classification.includes('purchase')) return 'bpr';
+    if (card.id === 5 || title.includes('otif') || classification.includes('adherence') || classification.includes('delivery')) return 'otif';
+    if (card.id === 6 || title.includes('traceability') || title.includes('serialization') || title.includes('scan') || title.includes('trace')) return 'traceability';
     return 'other';
   };
 
   const category = getCardCategory(card);
+
+  const yTicks = (category === 'biq' || isSectionBiq)
+    ? [0, 25, 50, 75, 100]
+    : (category === 'copq'
+      ? [0, 1000000, 2000000, 3000000, 4000000, 5000000, 6000000]
+      : (card.id === 2 ? [0, 500, 1000, 1500, 2000] : (card.id === 4 ? [0, 25, 50, 75, 100] : [0, 25, 50, 75, 100])));
+  
+  const yDomain = (category === 'biq' || isSectionBiq)
+    ? [0, 100]
+    : (category === 'copq'
+      ? [0, 6000000]
+      : (card.id === 2 ? [0, 2000] : (card.id === 4 ? [0, 100] : [0, 100])));
+
+  const tickFormatter = (v: any) => {
+    if (category === 'biq' || isSectionBiq) return `${v}%`;
+    if (isSectionOee || category === 'oee' || category === 'traceability' || category === 'otif') return `${v}%`;
+    if (category === 'copq') return v === 0 ? '₹0' : `₹${(v / 100000).toFixed(0)} L`;
+    if (category === 'inventory') return v.toLocaleString();
+    if (category === 'bpr') return `${v}%`;
+    return v;
+  };
 
   const getGradientColors = (cat: string) => {
     switch (cat) {
@@ -216,6 +219,7 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
         return { start: '#2563EB', end: '#1D4ED8' };
       case 'inventory':
         return { start: '#10B981', end: '#059669' };
+      case 'biq':
       case 'copq':
         return { start: '#7C3AED', end: '#6D28D9' };
       case 'bpr':
@@ -234,6 +238,7 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
   const getCardTarget = (cat: string) => {
     if (cat === 'oee') return { y: 80, label: "Target 80%" };
     if (cat === 'inventory') return { y: 1200, label: "Target Limit: 1,200 Units" };
+    if (cat === 'biq') return { y: 97, label: "Target 97%" };
     if (cat === 'copq') {
       const isSectionCopq = card.id === 103 || card.id === 104;
       return { y: isSectionCopq ? 15 : 1500000, label: "Target ₹15L" };
@@ -253,6 +258,7 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
     switch (cat) {
       case 'oee': return "% OEE";
       case 'inventory': return " Units";
+      case 'biq': return "% FTR";
       case 'copq': return " L";
       case 'bpr': return "% BPR";
       case 'otif': return "% OTIF";
@@ -292,7 +298,7 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
   const isWarningActive = (() => {
     if (card.id === 102 || card.id === 104) return true;
     if (card.id === 1) return liveData.oee < 70;
-    if (card.id === 3) return liveData.copqLoss > 3500000;
+    if (card.id === 3) return liveData.biqFtr < 95.0;
     if (card.id === 4) return liveData.daysOfSupply < 12.0;
     if (card.id === 5) return liveData.otif < 94.2;
     return false;
@@ -591,7 +597,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
     activeWipUnits: 1192,
     wipAge: 12.8,
     daysOfSupply: 12.0,
-    copqLoss: 3460000,
+    biqFtr: 94.7,
     qGate: 98.2,
     otif: 94.4,
     scheduleAdherence: 1.5,
@@ -699,7 +705,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
     return {
       oee: [...oeeYtdData.slice(0, 3), { name: 'Jul', value: liveData.oee }],
       inventory: [...inventoryYtdData.slice(0, 3), { name: 'Jul', value: liveData.activeWipUnits }],
-      copq: [...copqYtdData.slice(0, 3), { name: 'Jul', value: liveData.copqLoss }],
+      biq: [...biqYtdData.slice(0, 3), { name: 'Jul', value: liveData.biqFtr }],
       purchase: [
         { name: 'Apr', critical: 15, warning: 30, safe: 70, overstock: 100, value: 48 },
         { name: 'May', critical: 15, warning: 30, safe: 70, overstock: 100, value: 64 },
@@ -722,13 +728,13 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
             { label: "POST-MACHINING WIP", valText: "2,850 Units", pct: (2850 / 3000) * 100, color: "#EF4444" },
           ]
         };
-      case 3: // COPQ
+      case 3: // BIQ
         return {
-          title: "PLANT-WIDE COPQ LOSS INDEX",
+          title: "PLANT-WIDE BUILT-IN QUALITY INDEX",
           rows: [
-            { label: "TOTAL COPQ LOSS", valText: "₹34.6 L", pct: (34.6 / 50) * 100, color: "#7C3AED" },
-            { label: "PRE-MACHINING LOSS", valText: "₹12.2 L", pct: (12.2 / 50) * 100, color: "#0EA5E9" },
-            { label: "POST-MACHINING LOSS", valText: "₹22.4 L", pct: (22.4 / 50) * 100, color: "#EF4444" },
+            { label: "OVERALL FTR RATE", valText: "94.7%", pct: 94.7, color: "#7C3AED" },
+            { label: "PRE-MACHINING FTR", valText: "96.2%", pct: 96.2, color: "#0EA5E9" },
+            { label: "POST-MACHINING FTR", valText: "91.5%", pct: 91.5, color: "#EF4444" },
           ]
         };
       case 4: // BPR
@@ -831,61 +837,61 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
         }
       ];
     } else if (selectedRadarKpi === 3) {
-      // COPQ Selected
+      // BIQ Selected
       return [
         {
           id: 103,
-          title: 'Premachining COPQ',
+          title: 'Premachining BIQ',
           hoverGlowClass: 'hover:border-emerald-300',
           icon: TrendingDown,
-          color: '#10B981',
-          lighterColor: '#059669',
-          trackWash: 'rgba(16, 185, 129, 0.08)',
-          rgb: '16, 185, 129',
-          classification: 'PREMACHINING LOSS',
-          categoryPillClass: 'bg-emerald-50 text-[#10B981] border border-emerald-100',
-          retroValue: '₹12.2 L Loss',
-          retroLabel: 'Premachining COPQ Loss',
-          progressPercent: 35,
-          trendText: '▼ 5.4%',
+          color: '#7C3AED',
+          lighterColor: '#5D1C6A',
+          trackWash: 'rgba(124, 58, 237, 0.08)',
+          rgb: '124, 58, 237',
+          classification: 'PREMACHINING FTR',
+          categoryPillClass: 'bg-purple-50 text-[#7C3AED] border border-purple-100',
+          retroValue: '96.2% FTR',
+          retroLabel: 'Premachining First Time Right',
+          progressPercent: 96.2,
+          trendText: '▲ 1.4%',
           trendSub: 'vs target',
           trendBadgeBgClass: 'bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46]',
-          leadingValue: 'Supplier scrap',
+          leadingValue: 'High FTR yield',
           chartType: 'bar' as const,
           chartData: [
-            { name: 'Apr', value: 14.5 },
-            { name: 'May', value: 13.2 },
-            { name: 'Jun', value: 12.8 },
-            { name: 'Jul', value: 12.2 }
+            { name: 'Apr', value: 95.0 },
+            { name: 'May', value: 95.8 },
+            { name: 'Jun', value: 96.0 },
+            { name: 'Jul', value: 96.2 }
           ],
-          redirectTarget: 'copq' as PageId,
+          redirectTarget: 'biq' as PageId,
         },
         {
           id: 104,
-          title: 'Post-Machining COPQ',
+          title: 'Post-Machining BIQ',
           hoverGlowClass: 'hover:border-rose-300',
           icon: TrendingDown,
           color: '#EF4444',
           lighterColor: '#DC2626',
           trackWash: 'rgba(239, 68, 68, 0.08)',
           rgb: '239, 68, 68',
-          classification: 'POST-MACHINING LOSS',
+          classification: 'POST-MACHINING FTR',
           categoryPillClass: 'bg-red-50 text-[#EF4444] border border-red-100',
-          retroValue: '₹22.4 L Loss',
-          retroLabel: 'Post-Machining COPQ Loss',
-          progressPercent: 65,
-          trendText: '▲ 8.2%',
+          retroValue: '91.5% FTR',
+          retroLabel: 'Post-Machining First Time Right',
+          progressPercent: 91.5,
+          trendText: '▲ 0.8%',
           trendSub: 'vs target',
-          trendBadgeBgClass: 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B]',
+          trendBadgeBgClass: 'bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46]',
           leadingValue: 'Weld leak rework at LW1',
           chartType: 'bar' as const,
           chartData: [
-            { name: 'Apr', value: 18.2 },
-            { name: 'May', value: 19.5 },
-            { name: 'Jun', value: 21.0 },
-            { name: 'Jul', value: 22.4 }
+            { name: 'Apr', value: 89.2 },
+            { name: 'May', value: 90.1 },
+            { name: 'Jun', value: 91.0 },
+            { name: 'Jul', value: 91.5 }
           ],
-          redirectTarget: 'copq' as PageId,
+          redirectTarget: 'biq' as PageId,
         }
       ];
     } else if (selectedRadarKpi === 4) {
@@ -1182,30 +1188,31 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
     },
     {
       id: 3,
-      title: 'COPQ (Cost of Poor Quality)',
+      title: 'BIQ — Built-In Quality',
       hoverGlowClass: 'hover:border-violet-300',
       icon: TrendingDown,
       color: '#7C3AED',
-      lighterColor: '#6D28D9',
+      lighterColor: '#5D1C6A',
       trackWash: 'rgba(124, 58, 237, 0.08)',
       rgb: '124, 58, 237',
-      classification: 'QUALITY LOSS KPI',
-      categoryPillClass: 'bg-purple-50 text-[#8B5CF6] border border-purple-100',
-      retroValue: `₹${(liveData.copqLoss / 100000).toFixed(1)} L Total Loss`,
-      retroLabel: 'YTD scrap and rework costs incurred',
-      progressPercent: (liveData.qGate / 100) * 80,
-      trendText: '▼ 4.7%',
+      classification: 'BUILT-IN QUALITY KPI',
+      categoryPillClass: 'bg-purple-50 text-[#7C3AED] border border-purple-100',
+      retroValue: `${liveData.biqFtr.toFixed(1)}% FTR`,
+      retroLabel: 'First Time Right — YTD quality pass rate',
+      progressPercent: liveData.biqFtr,
+      trendText: '▲ 0.9%',
       trendSub: 'vs YTD 2025',
-      trendBadgeBgClass: 'bg-[#FEF2F2] border border-[#FECACA] shadow-[0_2px_8px_rgba(244,63,94,0.15)] text-[#991B1B]',
-      trendTextClass: 'text-[#991B1B]',
-      leadingValue: `${liveData.qGate.toFixed(1)}% Q-Gate Filtration`,
+      trendBadgeBgClass: 'bg-[#ECFDF5] border border-[#A7F3D0] shadow-[0_2px_8px_rgba(16,185,129,0.15)] text-[#065F46]',
+      trendTextClass: 'text-[#065F46]',
+      leadingValue: `${liveData.biqFtr.toFixed(1)}% Q-Gate Filtration`,
       leadingLabel: 'Defects caught inline before escaping',
       leadingIcon: ShieldCheck,
       leadingIconBgClass: 'bg-purple-50/50 border-purple-100/50',
       chartType: 'bar' as const,
-      chartData: chartDataWithLive.copq,
-      redirectTarget: 'copq' as PageId,
-      pulseKey: 'copqLoss',
+      chartData: chartDataWithLive.biq,
+      gradientStartColor: '#7C3AED',
+      redirectTarget: 'biq' as PageId,
+      pulseKey: 'biqFtr',
     },
     {
       id: 4,

@@ -141,11 +141,11 @@ export interface PlantTransaction {
 }
 
 /* ─── 2. DOMAIN CONSTANTS ─── */
-const YEARS_NUM = [2018,2019,2020,2021, 2022,2023, 2024, 2025, 2026];
+const YEARS_NUM = [2026];
 const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const YEARS = YEARS_NUM.map(String);
+const YEARS = ['Apr', 'May', 'Jun', 'Jul'];
 const SHIFTS = ['Shift A', 'Shift B', 'Shift C'];
 const LINES = ['Line 01', 'Line 02', 'Line 03'];
 const PLANTS = [
@@ -314,7 +314,7 @@ function applyFilters(records: PlantTransaction[], filters: FilterState): PlantT
  * Resolves X-Axis label array based on the selected time trend dimension.
  */
 function getLabelsForTrend(trend: string): string[] {
-  if (trend === 'year') return YEARS;
+  if (trend === 'year') return ['Apr', 'May', 'Jun', 'Jul'];
   if (trend === 'quarter') return QUARTERS;
   if (trend === 'month') return MONTHS;
   return DAYS;

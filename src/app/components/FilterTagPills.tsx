@@ -4,7 +4,7 @@ import { type FilterState } from './TimeTrendFilter';
 function periodLabel(filters: FilterState): string | null {
   const t = filters.trend;
   const s = filters.subPeriod;
-  if (t === 'year') return s === 'yoy' ? 'YoY' : 'YTD';
+  if (t === 'year') return 'YTD';
   if (t === 'quarter') return s === 'qoq' ? 'QoQ' : 'QTD';
   if (t === 'month') return s === 'mom' ? 'MoM' : 'MTD';
   if (t === 'week') return s === 'wow' ? 'WoW' : 'WTD';

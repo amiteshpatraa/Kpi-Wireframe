@@ -1,4 +1,4 @@
-import { PeriodId, ProductId, getTimeLabels, isSundayMtd } from './types';
+import { PeriodId, ProductId, getTimeLabels } from './types';
 
 export function resolveOeeData(period: PeriodId, product: ProductId, process: string): any {
   const tLabels = getTimeLabels(period);
@@ -250,23 +250,6 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
       value: Math.round((burrs + blowHoles + gaps) * scale)
     };
   });
-
-  if (period === 'MTD') {
-    for (let i = 0; i < tLabels.length; i++) {
-      if (isSundayMtd(period, i)) {
-        if (monthlyAvailability[i]) monthlyAvailability[i] = { name: monthlyAvailability[i].name, avg_avail: 0, downtime: 0 };
-        if (monthlyPerformance[i]) monthlyPerformance[i] = { name: monthlyPerformance[i].name, actualVolume: 0, avg_perf: 0 };
-        if (monthlyQuality[i]) monthlyQuality[i] = { name: monthlyQuality[i].name, avg_fpy: 0, scrapPct: 0 };
-        if (monthlyOee[i]) monthlyOee[i] = { name: monthlyOee[i].name, value: 0 };
-        if (setupPmMonthlyData[i]) setupPmMonthlyData[i] = { name: setupPmMonthlyData[i].name, planned: 0, actual: 0 };
-        if (unplannedDowntimeTrendData[i]) unplannedDowntimeTrendData[i] = { name: unplannedDowntimeTrendData[i].name, breakdown: 0, mttr: 0, mtbf: 0 };
-        if (cycleTaktStationData[i]) cycleTaktStationData[i] = { name: cycleTaktStationData[i].name, setup: 0, processing: 0, limit: 45 };
-        if (monthlyOutputPerManData[i]) monthlyOutputPerManData[i] = { name: monthlyOutputPerManData[i].name, actual: 0 };
-        if (monthlyReworkData[i]) monthlyReworkData[i] = { name: monthlyReworkData[i].name, planned: 0, rework: 0, value: 0 };
-        if (monthlyInHouseRejectionsData[i]) monthlyInHouseRejectionsData[i] = { name: monthlyInHouseRejectionsData[i].name, burrs: 0, blowHoles: 0, gaps: 0, value: 0 };
-      }
-    }
-  }
 
   const targetValue = isLW1 ? 70 : (product === 'MATRIX' ? 85 : (product === 'BANANA' ? 75 : 80));
 

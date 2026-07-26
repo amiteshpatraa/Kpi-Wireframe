@@ -101,6 +101,14 @@ function GradDefs() {
         <stop offset="100%" stopColor="#5BBEBF" stopOpacity={0.8} />
       </linearGradient>
       {/* Premium Sunset Coral, Apricot & Mint Palette */}
+      <linearGradient id="gClassicCobalt" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#1C4D8D" stopOpacity={1} />
+        <stop offset="100%" stopColor="#123B70" stopOpacity={0.8} />
+      </linearGradient>
+      <linearGradient id="gSteelBlue" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#4988C4" stopOpacity={1} />
+        <stop offset="100%" stopColor="#306AA1" stopOpacity={0.8} />
+      </linearGradient>
       <linearGradient id="gSeries1" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor="#EC6530" />
         <stop offset="100%" stopColor="#FFAE6E" />
@@ -273,8 +281,11 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
     }
 
     if (trend === 'month') {
-      // MTD: daily tick marks 1 to 31
-      return Array.from({ length: 31 }, (_, i) => String(i + 1));
+      // MTD: daily tick marks 1 to 31 excluding factory Sundays
+      const SUNDAYS = [7, 14, 21, 28];
+      return Array.from({ length: 31 }, (_, i) => i + 1)
+        .filter(d => !SUNDAYS.includes(d))
+        .map(d => String(d));
     }
 
     if (trend === 'week') {
@@ -706,7 +717,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                     yAxisId="left"
                     dataKey="plan"
                     name="Planned Output"
-                    fill="url(#gPlannedGrey)"
+                    fill="url(#gClassicCobalt)"
                     isAnimationActive={true}
                     animationDuration={1200}
                     animationEasing="ease-out"
@@ -720,7 +731,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                       return (
                         <Cell
                           key={`cell-plan-${index}`}
-                          fill="url(#gPlannedGrey)"
+                          fill="url(#gClassicCobalt)"
                           opacity={opacity}
                           onMouseEnter={() => setHoveredBar({ chartId: 'production_adherence', index })}
                           onMouseLeave={() => setHoveredBar(null)}
@@ -747,7 +758,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                     yAxisId="left"
                     dataKey="actual"
                     name="Actual Output"
-                    fill="url(#gSeries1)"
+                    fill="url(#gSteelBlue)"
                     isAnimationActive={true}
                     animationDuration={1200}
                     animationEasing="ease-out"
@@ -761,7 +772,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                       return (
                         <Cell
                           key={`cell-actual-${index}`}
-                          fill="url(#gSeries1)"
+                          fill="url(#gSteelBlue)"
                           opacity={opacity}
                           onMouseEnter={() => setHoveredBar({ chartId: 'production_adherence', index })}
                           onMouseLeave={() => setHoveredBar(null)}
@@ -826,7 +837,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                   <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine y={500} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Safety Corridor', position: 'insideTopLeft', fill: '#EF4444', fontSize: 8 }} />
+                  <ReferenceLine y={500} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Demand Forecast Cover', position: 'insideTopLeft', fill: '#EF4444', fontSize: 8 }} />
                   <Area type="monotone" dataKey="raw" name="Raw Material" stackId="1" stroke="#8FDDDF" fill="url(#gRawArea)" fillOpacity={1} />
                   <Area type="monotone" dataKey="wip" name="WIP Buffer" stackId="1" stroke="#FFAE6E" fill="url(#gWipArea)" fillOpacity={1} />
                   <Legend {...commonLegendProps} />
@@ -1089,7 +1100,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                   </div>
                   <div style={{ height: '280px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={chart1Data} barCategoryGap="20%" margin={{ top: 15, right: 5, left: -15, bottom: 5 }}>
+                      <ComposedChart data={chart1Data} barCategoryGap="20%" barGap="-100%" margin={{ top: 15, right: 5, left: -15, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F8FAFC" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 8, fill: T.mutedColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="left" label={{ value: 'Hours', angle: -90, position: 'insideLeft', offset: 10, fontSize: 8, fill: T.mutedColor }} tick={{ fontSize: 8, fill: T.mutedColor }} axisLine={false} tickLine={false} />
@@ -1105,7 +1116,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                           animationDuration={1200}
                           animationEasing="ease-out"
                           radius={[4, 4, 0, 0]}
-                          maxBarSize={30}
+                          barSize={30}
                         >
                           {chart1Data.map((entry: any, index: number) => {
                             const isActive = hoveredBar?.chartId === 'transit_time' && hoveredBar?.index === index;
@@ -1146,7 +1157,7 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                           animationDuration={1200}
                           animationEasing="ease-out"
                           radius={[4, 4, 0, 0]}
-                          maxBarSize={22}
+                          barSize={16}
                         >
                           {chart1Data.map((entry: any, index: number) => {
                             const isActive = hoveredBar?.chartId === 'transit_time' && hoveredBar?.index === index;
@@ -1206,6 +1217,8 @@ export function OtifPage({ filters, onChange }: OtifPageProps) {
                           outerRadius={80}
                           paddingAngle={4}
                           dataKey="value"
+                          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                          labelLine={false}
                         >
                           {delayBreakdownData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />

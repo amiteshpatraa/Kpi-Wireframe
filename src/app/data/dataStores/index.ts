@@ -1,6 +1,7 @@
 import { PageId, PeriodId, ProductId, processes } from './types';
 import { resolveOeeData } from './oeeDataStore';
 import { resolveCopqData } from './copqDataStore';
+import { resolveBiqData } from './biqDataStore';
 import { resolveBprData } from './bprDataStore';
 import { resolveOtifData } from './otifDataStore';
 import { resolveInventoryData } from './inventoryDataStore';
@@ -9,7 +10,8 @@ import { resolveTraceabilityData } from './traceabilityDataStore';
 export * from './types';
 export { resolveOeeData } from './oeeDataStore';
 export { resolveCopqData } from './copqDataStore';
-export { resolveBprData } from './bprDataStore';
+export { resolveBiqData } from './biqDataStore';
+export { resolveBprData, resolvePromisedActualData, resolveAdherenceDataWithVolume } from './bprDataStore';
 export { resolveOtifData } from './otifDataStore';
 export { resolveInventoryData } from './inventoryDataStore';
 export { resolveTraceabilityData } from './traceabilityDataStore';
@@ -26,6 +28,7 @@ export function getDashboardData(
   const pageUpper = (page || '').toUpperCase();
   if (pageUpper === 'OVERVIEW' || pageUpper === 'OEE') normPage = 'OEE';
   else if (pageUpper === 'COPQ') normPage = 'COPQ';
+  else if (pageUpper === 'BIQ') normPage = 'BIQ';
   else if (pageUpper === 'BPR') normPage = 'BPR';
   else if (pageUpper === 'OTIF') normPage = 'OTIF';
   else if (pageUpper === 'INVENTORY') normPage = 'INVENTORY';
@@ -68,6 +71,8 @@ export function getDashboardData(
       return resolveOeeData(normPeriod, normProduct, normProcess);
     case 'COPQ':
       return resolveCopqData(normPeriod, normProduct, normProcess, shift);
+    case 'BIQ':
+      return resolveBiqData(normPeriod, normProduct, normProcess, shift);
     case 'BPR':
       return resolveBprData(normPeriod, normProduct, normProcess);
     case 'OTIF':

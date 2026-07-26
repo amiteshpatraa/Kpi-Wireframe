@@ -1,4 +1,4 @@
-import { PeriodId, ProductId, T, getTimeLabels, isSundayMtd } from './types';
+import { PeriodId, ProductId, T, getTimeLabels } from './types';
 
 export function resolveBprData(period: PeriodId, product: ProductId, process: string): any {
   const tLabels = getTimeLabels(period);
@@ -195,39 +195,6 @@ export function resolveBprData(period: PeriodId, product: ProductId, process: st
         { vendor: 'Krupp Steel Forge', delayDays: 1.8, color: T.green, machine: 'OP10-01' },
         { vendor: 'SealTech Components', delayDays: 4.5, color: T.red, machine: 'Brazing' }
       ];
-
-  if (period === 'MTD') {
-    for (let i = 0; i < tLabels.length; i++) {
-      if (isSundayMtd(period, i)) {
-        if (scheduleAdherenceData[i]) {
-          scheduleAdherenceData[i] = {
-            name: scheduleAdherenceData[i].name,
-            supplier: 0,
-            demand: 0
-          };
-        }
-        if (bufferPenetrationStepData[i]) {
-          bufferPenetrationStepData[i] = {
-            name: bufferPenetrationStepData[i].name,
-            critical: 15,
-            warning: 30,
-            safe: 70,
-            overstock: 100,
-            value: 0
-          };
-        }
-        if (bufferPenetrationStackedData[i]) {
-          bufferPenetrationStackedData[i] = {
-            name: bufferPenetrationStackedData[i].name,
-            critical: 0,
-            warning: 0,
-            optimal: 0,
-            overstock: 0
-          };
-        }
-      }
-    }
-  }
 
   const turnsPct = Math.min(100, penetrationIndex);
   const coverPct = Math.min(100, supplierAdherence);

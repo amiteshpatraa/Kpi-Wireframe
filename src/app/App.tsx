@@ -8,7 +8,7 @@ import { ExecutiveGateway } from './components/ExecutiveGateway';
 import { OverviewPage } from './components/OverviewPage';
 
 
-import { CopqPage } from './components/CopqPage';
+import { BiqPage } from './components/BiqPage';
 import { BprPage } from './components/BprPage';
 import { OtifPage } from './components/OtifPage';
 import { InventoryPage } from './components/InventoryPage';
@@ -46,8 +46,7 @@ export default function App() {
 
     const renderPage = () => {
       switch (currentPage) {
-        // case 'overview': return <OverviewPage filters={filters} onChange={setFilters} />;
-        case 'copq': return <CopqPage filters={filters} onChange={setFilters} />;
+        case 'biq': return <BiqPage filters={filters} onChange={setFilters} />;
         case 'bpr': return <BprPage filters={filters} onChange={setFilters} />;
         case 'otif': return <OtifPage filters={filters} onChange={setFilters} />;
         case 'inventory': return <InventoryPage filters={filters} onChange={setFilters} />;

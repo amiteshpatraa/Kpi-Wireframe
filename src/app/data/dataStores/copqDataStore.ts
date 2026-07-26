@@ -1,4 +1,4 @@
-import { PeriodId, ProductId, getTimeLabels, isSundayMtd } from './types';
+import { PeriodId, ProductId, getTimeLabels } from './types';
 
 export function resolveCopqData(period: PeriodId, product: ProductId, process: string, shift?: string): any {
   const tLabels = getTimeLabels(period);
@@ -139,45 +139,6 @@ export function resolveCopqData(period: PeriodId, product: ProductId, process: s
   }));
 
   const targetValue = isLW1 ? 300000 : (product === 'MATRIX' ? 100000 : (product === 'BANANA' ? 250000 : 150000));
-
-  if (period === 'MTD') {
-    for (let i = 0; i < tLabels.length; i++) {
-      if (isSundayMtd(period, i)) {
-        if (internalFailureData[i]) {
-          internalFailureData[i] = {
-            name: internalFailureData[i].name,
-            shiftA: 0,
-            shiftB: 0,
-            shiftC: 0,
-            totalLoss: 0
-          };
-        }
-        if (externalFailureBulletData[i]) {
-          externalFailureBulletData[i] = {
-            name: externalFailureBulletData[i].name,
-            actual: 0,
-            target: 5000,
-            budget: 10000
-          };
-        }
-        if (preventionAppraisalData[i]) {
-          preventionAppraisalData[i] = {
-            name: preventionAppraisalData[i].name,
-            prevention: 0,
-            appraisal: 0
-          };
-        }
-        if (summaryTrendData[i]) {
-          summaryTrendData[i] = {
-            name: summaryTrendData[i].name,
-            internal: 0,
-            external: 0,
-            prevention: 0
-          };
-        }
-      }
-    }
-  }
 
   const result = {
     ytdLoss,

@@ -128,12 +128,23 @@ function DigitalThreadViz({ nodes, onNodeClick, selectedNode }: {
         const cx  = step * (i + 1);
         const col = NODE_COLORS[n.status];
         const sel = selectedNode?.id === n.id;
+
+        let glowStyle = 'none';
+        if (n.status === 'complete') {
+          glowStyle = sel ? 'drop-shadow(0 0 14px rgba(16, 185, 129, 0.95))' : 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.6))';
+        } else if (n.status === 'warning') {
+          // Warning includes thermal-damaged nodes like LW01
+          glowStyle = sel ? 'drop-shadow(0 0 14px rgba(245, 158, 11, 0.95))' : 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.8))';
+        } else if (n.status === 'missing') {
+          glowStyle = sel ? 'drop-shadow(0 0 14px rgba(239, 68, 68, 0.95))' : 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.8))';
+        }
+
         return (
           <g key={n.id} onClick={() => onNodeClick(n)} className="cursor-pointer">
             <circle cx={cx} cy={cy} r={nodeR + (sel ? 4 : 0)}
               fill={col.fill} stroke={col.stroke}
               strokeWidth={sel ? 3 : 1.5}
-              filter={sel ? 'url(#glow)' : undefined}
+              style={{ filter: glowStyle, transition: 'all 0.3s ease' }}
               className="transition-all duration-200"
             />
             {n.status === 'complete' && (

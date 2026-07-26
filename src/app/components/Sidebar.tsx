@@ -2,7 +2,7 @@ import { FileText, BarChart3, Shield, Package, Wrench, ChevronsLeft, ChevronsRig
 import { cn } from './ui/utils';
 import atlasLogo from '../../assets/image-1.png';
 
-export type PageId = 'overview' | 'summary' | 'production' | 'quality' | 'copq' | 'bpr' | 'otif' | 'inventory' | 'traceability' | 'maintenance';
+export type PageId = 'overview' | 'summary' | 'production' | 'quality' | 'biq' | 'bpr' | 'otif' | 'inventory' | 'traceability' | 'maintenance';
 
 interface SidebarProps {
   currentPage: PageId;
@@ -16,7 +16,7 @@ const navItems: { page: PageId; icon: React.ElementType; label: string }[] = [
   { page: 'summary',     icon: FileText,  label: 'Summary' },
   // { page: 'production',  icon: BarChart3, label: 'Production' },
   // { page: 'quality',     icon: Shield,    label: 'Quality' },
-  { page: 'copq',        icon: AlertTriangle, label: 'COPQ' },
+  { page: 'biq',         icon: AlertTriangle, label: 'BIQ' },
   { page: 'bpr',         icon: Boxes,     label: 'BPR' },
   { page: 'otif',        icon: Truck,     label: 'OTIF' },
   { page: 'inventory',     icon: Package,    label: 'Inventory' },

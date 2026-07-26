@@ -501,7 +501,7 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
               <Tooltip content={<CustomTooltip />} />
               <ReferenceLine y={50} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Target 50m', fill: '#EF4444', position: 'top', fontSize: 8, fontWeight: 'bold' }} />
               <Area type="monotone" dataKey="planned" name="Planned PM (m)" stroke="#00B574" strokeWidth={2} fill="url(#areaSetup)" dot={false} />
-              <Bar dataKey="actual" name="Actual PM (m)" fill="url(#redGrad)" radius={[3, 3, 0, 0]} maxBarSize={22} />
+              <Bar dataKey="actual" name="Actual PM (m)" fill="url(#redGrad)" radius={[3, 3, 0, 0]} maxBarSize={20} />
               <Legend {...commonLegendProps} />
             </ComposedChart>
           </ResponsiveContainer>
@@ -549,9 +549,11 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
           <p className="text-xs font-bold text-slate-700">Performance — Station Cycle Time vs. Takt</p>
         </div>
         <div className="h-8 w-px bg-slate-200 mx-1" />
-        <div className="text-center">
+        <div className="text-center flex flex-col items-center">
           <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Bottlenecks</p>
-          <p className="text-xs font-black text-rose-500">LW02 · PACK · VMC3</p>
+          <span className="mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200">
+            3 Bottleneck Alerts (LW02 · PACK · VMC3)
+          </span>
         </div>
       </div>
 
@@ -609,7 +611,9 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
               <YAxis tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} domain={[0, 600]} />
               <Tooltip content={<CustomTooltip />} />
               <ReferenceLine y={400} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Target 400 pcs/op', fill: '#EF4444', position: 'top', fontSize: 8, fontWeight: 'bold' }} />
-              <Bar dataKey="actual" name="Actual Productivity" fill="url(#blueGrad)" maxBarSize={22} />
+              <Bar dataKey="actual" name="Actual Productivity" fill="url(#blueGrad)" maxBarSize={22}>
+                <LabelList dataKey="actual" position="top" style={{ fontSize: 8, fontWeight: 700, fill: '#475569' }} />
+              </Bar>
               <Legend {...commonLegendProps} />
             </ComposedChart>
           </ResponsiveContainer>
@@ -647,10 +651,20 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
           </div>
           <div className="relative w-32 h-32 mx-auto my-3 flex items-center justify-center">
             <svg className="w-full h-full transform -rotate-90">
+              <defs>
+                <linearGradient id="concentricCoral" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#EC6530" />
+                  <stop offset="100%" stopColor="#F5788B" />
+                </linearGradient>
+                <linearGradient id="concentricAmethyst" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#8B5CF6" />
+                  <stop offset="100%" stopColor="#A78BFA" />
+                </linearGradient>
+              </defs>
               <circle cx="64" cy="64" r={R_final} fill="transparent" stroke="#F1F5F9" strokeWidth="7" />
               <circle cx="64" cy="64" r={R_ftr} fill="transparent" stroke="#F1F5F9" strokeWidth="7" />
-              <circle cx="64" cy="64" r={R_final} fill="transparent" stroke="#F5788B" strokeWidth="7" strokeDasharray={C_final} strokeDashoffset={offsetFinal} strokeLinecap="round" />
-              <circle cx="64" cy="64" r={R_ftr} fill="transparent" stroke="#FFDA62" strokeWidth="7" strokeDasharray={C_ftr} strokeDashoffset={offsetFtr} strokeLinecap="round" />
+              <circle cx="64" cy="64" r={R_final} fill="transparent" stroke="url(#concentricCoral)" strokeWidth="7" strokeDasharray={C_final} strokeDashoffset={offsetFinal} strokeLinecap="round" />
+              <circle cx="64" cy="64" r={R_ftr} fill="transparent" stroke="url(#concentricAmethyst)" strokeWidth="7" strokeDasharray={C_ftr} strokeDashoffset={offsetFtr} strokeLinecap="round" />
             </svg>
             <div className="absolute flex flex-col items-center justify-center text-center">
               <span className="text-base font-black text-slate-800">{concentricFinalRate}%</span>
@@ -658,7 +672,7 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
             </div>
           </div>
           <div className="text-[8px] font-bold text-slate-400 text-center uppercase tracking-wide border-t border-slate-100 pt-3 flex justify-between">
-            <span>FPY: <span className="font-black" style={{ color: '#FFDA62' }}>{concentricFtrRate}%</span></span>
+            <span>FPY: <span className="font-black" style={{ color: '#8B5CF6' }}>{concentricFtrRate}%</span></span>
             <span className="text-slate-300">Gap = loop waste</span>
           </div>
         </div>
@@ -723,7 +737,7 @@ export function OverviewPage({ filters, onChange }: OverviewPageProps) {
                     <YAxis tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} />
                     <Tooltip content={<CustomTooltip />} />
                     <ReferenceLine y={55} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Target 55', fill: '#EF4444', position: 'top', fontSize: 8, fontWeight: 'bold' }} />
-                    <Bar dataKey="rework" name="Rework Count" fill="#FFAE6E" radius={[2, 2, 0, 0]} cursor="pointer" maxBarSize={22} />
+                    <Bar dataKey="rework" name="Rework Count" fill="#EC6530" radius={[2, 2, 0, 0]} cursor="pointer" maxBarSize={22} />
                     <Bar dataKey="planned" name="Planned Runs" fill="#1C4D8D" radius={[2, 2, 0, 0]} cursor="pointer" maxBarSize={22} />
                     <Legend {...commonLegendProps} />
                   </BarChart>

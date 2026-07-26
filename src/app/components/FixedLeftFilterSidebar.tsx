@@ -9,7 +9,7 @@ interface SidebarProps {
 }
 
 /* ─── Static Dropdown Option Lists ─── */
-const productOptions = ['Matrix', 'Banana', 'Kiwi'];
+const productOptions = ['All','Matrix', 'Banana', 'Kiwi'];
 
 const plantOptions = [
   { group: 'Mother Plant', values: ['Tata Toyo Radiator Ltd. (Chakan)'] },
@@ -17,15 +17,14 @@ const plantOptions = [
   { group: 'Warehouses', values: ['TTR Pithampur', 'TTR United Kingdom'] }
 ];
 
-const processOptions = [
-  'VMC1', 'PACK', 'UC1', 'SF01', 'LW1', 'CL1', 'LW2', 'LW3', 'BRZ', 'SB10', 
-  'RSHP', 'ALT10', 'OP10', 'OP20', 'SLGL', 'OP30', 'OP40', 'OP50', 'UC2', 'EOL'
+const processOptions = ['All',
+    'UC1', 'SF01', 'LW1', 'CL1', 'LW2', 'LW3', 'BRZ', 'SHBL', 
+  'RSHP', 'ALT10', 'VMC1', 'SLGL', 'VMC2', 'UC2', 'EOL','PACK',
 ];
 
 const subOptionsMap = {
   ytd: [
-    { value: 'ytd', label: 'Year to Date' },
-    { value: 'yoy', label: 'Year on Year (YoY)' }
+    { value: 'ytd', label: 'Year to Date' }
   ],
   qtd: [
     { value: 'qtd', label: 'Quarter to Date' },

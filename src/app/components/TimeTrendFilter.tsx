@@ -6,7 +6,7 @@ export type TimeTrend = 'year' | 'quarter' | 'month' | 'week' | 'custom';
 
 export interface FilterState {
   trend: TimeTrend;
-  subPeriod?: 'ytd' | 'yoy' | 'qtd' | 'qoq' | 'mtd' | 'mom' | 'wtd' | 'wow' | null;
+  subPeriod?: 'ytd' | 'qtd' | 'qoq' | 'mtd' | 'mom' | 'wtd' | 'wow' | null;
   shift: string;
   line: string;
   product: string;

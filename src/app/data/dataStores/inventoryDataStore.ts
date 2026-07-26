@@ -1,4 +1,4 @@
-import { PeriodId, ProductId, getTimeLabels, isSundayMtd } from './types';
+import { PeriodId, ProductId, getTimeLabels } from './types';
 
 export function resolveInventoryData(period: PeriodId, product: ProductId, process: string): any {
   const tLabels = getTimeLabels(period);
@@ -18,9 +18,6 @@ export function resolveInventoryData(period: PeriodId, product: ProductId, proce
     let val = wipOnFloor + Math.cos(i) * 150;
     if (period === 'MTD' && i === 11) {
       val = val * 2;
-    }
-    if (isSundayMtd(period, i)) {
-      val = 0;
     }
     return {
       name,

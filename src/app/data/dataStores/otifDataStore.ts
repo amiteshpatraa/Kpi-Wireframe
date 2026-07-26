@@ -1,4 +1,4 @@
-import { PeriodId, ProductId, getTimeLabels, isSundayMtd } from './types';
+import { PeriodId, ProductId, getTimeLabels } from './types';
 
 export const PILLARS = [
   {
@@ -153,51 +153,6 @@ export function resolveOtifData(period: PeriodId, product: ProductId, process: s
       status: aMachined + aAssembled + aFabricated >= pMachined + pAssembled + pFabricated ? 'ON_TRACK' : 'BEHIND'
     };
   });
-
-  if (period === 'MTD') {
-    for (let i = 0; i < tLabels.length; i++) {
-      if (isSundayMtd(period, i)) {
-        if (otifTrend[i]) {
-          otifTrend[i] = {
-            name: otifTrend[i].name,
-            value: 0,
-            target: 95.0
-          };
-        }
-        if (otifSummaryData[i]) {
-          otifSummaryData[i] = {
-            name: otifSummaryData[i].name,
-            scheduled: 0,
-            delivered: 0,
-            pct: 0
-          };
-        }
-        if (dispatchAdherenceData[i]) {
-          dispatchAdherenceData[i] = {
-            name: dispatchAdherenceData[i].name,
-            onTime: 0,
-            delayed: 0
-          };
-        }
-        if (productionPlanActualData[i]) {
-          productionPlanActualData[i] = {
-            name: productionPlanActualData[i].name,
-            plan: 0,
-            actual: 0,
-            variance: 0,
-            adherence: 0
-          };
-        }
-        if (materialReadinessData[i]) {
-          materialReadinessData[i] = {
-            name: materialReadinessData[i].name,
-            raw: 0,
-            wip: 0
-          };
-        }
-      }
-    }
-  }
 
   return {
     otifVal,

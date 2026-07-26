@@ -193,7 +193,12 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
   const timeLabels = useMemo(() => {
     const trend = filters.trend;
     if (trend === 'quarter') return ['Apr', 'May', 'Jun', 'Jul'];
-    if (trend === 'month')   return Array.from({ length: 31 }, (_, i) => String(i + 1));
+    if (trend === 'month') {
+      const SUNDAYS = [7, 14, 21, 28];
+      return Array.from({ length: 31 }, (_, i) => i + 1)
+        .filter(d => !SUNDAYS.includes(d))
+        .map(d => String(d));
+    }
     if (trend === 'week')    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     return ['Apr', 'May', 'Jun', 'Jul'];
   }, [filters.trend]);
@@ -531,7 +536,12 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
     const localTimeLabels = useMemo(() => {
       const trend = lock.effectiveFilters.trend;
       if (trend === 'quarter') return ['Apr', 'May', 'Jun', 'Jul'];
-      if (trend === 'month') return Array.from({ length: 31 }, (_, i) => String(i + 1));
+      if (trend === 'month') {
+        const SUNDAYS = [7, 14, 21, 28];
+        return Array.from({ length: 31 }, (_, i) => i + 1)
+          .filter(d => !SUNDAYS.includes(d))
+          .map(d => String(d));
+      }
       if (trend === 'week') return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
       return ['Apr', 'May', 'Jun', 'Jul'];
     }, [lock.effectiveFilters.trend, lock.effectiveFilters.subPeriod]);
@@ -1056,7 +1066,7 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
             <span className="text-[8px] font-black bg-teal-50 text-teal-600 border border-teal-200 px-2 py-1 rounded uppercase">Dual Axis</span>
           </div>
 
-          <div style={{ height: 280, width: '100%' }}>
+          <div style={{ height: 280, minHeight: 280, width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={fgAgingData} barCategoryGap="20%" margin={{ top: 20, right: 10, left: -20, bottom: 10 }}>
                 <defs>
@@ -1218,6 +1228,53 @@ export function InventoryPage({ filters, onChange }: InventoryPageProps) {
               <Line yAxisId="right" type="monotone" dataKey="avgDwellHours" name="Avg Dwell Time" stroke="#F5788B" strokeWidth={2.5} dot={{ r: 5, fill: '#F5788B', stroke: 'white', strokeWidth: 1.5 }} isAnimationActive={false} />
               <Legend verticalAlign="bottom" align="center" iconType="circle" iconSize={6} wrapperStyle={centeredLegendStyle} />
             </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* WIP Station Queue Volume Chart (Drill-Down 2B - Middle) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col gap-5" style={cardStyle}>
+        <div className="border-b border-slate-100 pb-3 flex justify-between items-center">
+          <div>
+            <h4 className="text-[10px] font-black text-teal-600 tracking-widest uppercase">Workstation WIP Queue Volume</h4>
+            <p className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">
+              Current queue levels across all 20 workstations relative to safety buffer limits
+            </p>
+          </div>
+        </div>
+        <div style={{ height: 280, minHeight: 280, width: '100%' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={wipStationData} margin={{ top: 20, right: 10, left: -20, bottom: 10 }}>
+              <defs>
+                <linearGradient id="wipStationTeal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#14B8A6" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#0D9488" stopOpacity={0.7} />
+                </linearGradient>
+                <linearGradient id="wipStationRed" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#EF4444" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#DC2626" stopOpacity={0.7} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="#E2E8F0" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#64748B', fontWeight: 800 }} axisLine={false} tickLine={false} interval={0} />
+              <YAxis tick={{ fontSize: 9, fill: '#64748B' }} axisLine={false} tickLine={false} />
+              <Tooltip content={<CustomTooltip formatter={(v: any) => [`${v} units`, 'WIP Queue']} />} />
+              <ReferenceLine y={500} stroke="#EF4444" strokeDasharray="3 3" strokeWidth={1.5}
+                label={{ value: 'Safety Limit: 500', fill: '#EF4444', fontSize: 8, fontWeight: 'bold', position: 'top' }} />
+              <Bar dataKey="wipUnits" name="WIP Queue" maxBarSize={20} radius={[3, 3, 0, 0]}>
+                {wipStationData.map((entry: any, index: number) => {
+                  const isOverLimit = entry.name === 'CL1' || entry.name === 'PACK';
+                  return (
+                    <Cell
+                      key={`cell-wip-station-${index}`}
+                      fill={isOverLimit ? 'url(#wipStationRed)' : 'url(#wipStationTeal)'}
+                      style={{ transition: 'all 0.3s ease' }}
+                    />
+                  );
+                })}
+                <LabelList dataKey="wipUnits" position="top" style={{ fontSize: 7, fontWeight: 700, fill: '#475569' }} />
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>

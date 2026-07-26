@@ -18,7 +18,7 @@ const navOptions = [
   { id: 'overview', label: 'OEE Performance Index', icon: Cpu, desc: 'Availability, performance & quality' },
   { id: 'inventory', label: 'Inventory Pipeline', icon: Layers, desc: 'WIP, flow velocity & supply runway' },
   { id: 'bpr', label: 'Raw Material / BPR', icon: Boxes, desc: 'BPR execution & safe stock buffer' },
-  { id: 'copq', label: 'COPQ', icon: AlertTriangle, desc: 'Cost of Poor Quality & defects caught' },
+  { id: 'biq',  label: 'Built-In Quality (BIQ)', icon: AlertTriangle, desc: 'FTR %, Cpk, LPA Audit & Supplier PPM' },
   { id: 'otif', label: 'OTIF Delivery', icon: Truck, desc: 'Shipment success & schedule adherence' },
   { id: 'traceability', label: 'Traceability', icon: GitBranch, desc: 'Genealogy tracking & digital thread' },
 ] as const;
