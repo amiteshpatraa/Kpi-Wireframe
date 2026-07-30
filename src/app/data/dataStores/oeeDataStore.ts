@@ -1,5 +1,10 @@
 import { PeriodId, ProductId, getTimeLabels } from './types';
 
+function getSeedRandom(seed: number): number {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
 export function resolveOeeData(period: PeriodId, product: ProductId, process: string): any {
   const tLabels = getTimeLabels(period);
   const isLW1 = process === 'LW1';
@@ -75,19 +80,99 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
     });
   } else if (period === 'MTD') {
     monthlyAvailability = tLabels.map((name, i) => {
-      const day = i + 1;
-      const uptime = (day === 12) ? 55.0 : 83.0 + Math.sin(day) * 1.5;
-      return { name, avg_avail: +(uptime * scale).toFixed(1), downtime: (day === 12) ? 180 : Math.round((100 - uptime) * 0.2) };
+      const dayNum = parseInt(name);
+      const waveAvail = Math.sin(dayNum * 0.9) * 1.5 + Math.cos(dayNum * 1.7) * 1.0;
+      const pseudoRand = (getSeedRandom(dayNum) - 0.5) * 2;
+      const randAvail = pseudoRand * 1.0;
+
+      let uptime = 88.0 + waveAvail + randAvail;
+
+      if (dayNum === 5) {
+        uptime = 81.5;
+      } else if (dayNum === 13) {
+        uptime = 35.0;
+      } else if (dayNum === 22) {
+        uptime = 82.0;
+      } else if ([1, 8, 15, 29].includes(dayNum)) {
+        // Monday warmup drop (8% from standard peak)
+        uptime = 82.0 + waveAvail + randAvail;
+      } else if ([6, 20, 27].includes(dayNum)) {
+        // Friday
+        uptime = 88.0 + waveAvail + randAvail;
+      } else if ([2, 3, 4, 9, 10, 11, 16, 17, 18, 23, 24, 25, 30, 31].includes(dayNum)) {
+        // Mid-week peak stability
+        uptime = 90.0 + waveAvail + randAvail;
+      } else {
+        // Other days (e.g. Day 12, 19, 26)
+        uptime = 88.0 + waveAvail + randAvail;
+      }
+
+      return {
+        name,
+        avg_avail: +Math.min(100, Math.max(0, uptime * scale)).toFixed(1),
+        downtime: (dayNum === 13) ? 270 : Math.round((100 - uptime) * 0.2)
+      };
     });
+
     monthlyPerformance = tLabels.map((name, i) => {
-      const day = i + 1;
-      const rate = (day === 12) ? 60.0 : 90.0 + Math.cos(day) * 1.5;
-      return { name, actualVolume: Math.round(1200 * (rate / 100)), avg_perf: +(rate * scale).toFixed(1) };
+      const dayNum = parseInt(name);
+      const wavePerf = Math.cos(dayNum * 0.9) * 1.5 + Math.sin(dayNum * 1.7) * 1.0;
+      const pseudoRand = (getSeedRandom(dayNum + 10) - 0.5) * 2;
+      const randPerf = pseudoRand * 1.0;
+
+      let rate = 90.0 + wavePerf + randPerf;
+
+      if (dayNum === 5) {
+        rate = 62.0;
+      } else if (dayNum === 13) {
+        rate = 52.0;
+      } else if (dayNum === 22) {
+        rate = 76.0;
+      } else if ([1, 8, 15, 29].includes(dayNum)) {
+        // Monday warmup drop (8% from standard peak)
+        rate = 85.0 + wavePerf + randPerf;
+      } else if ([6, 20, 27].includes(dayNum)) {
+        // Friday tooling wear drop (4% from mid-week peak)
+        rate = 89.0 + wavePerf + randPerf;
+      } else if ([2, 3, 4, 9, 10, 11, 16, 17, 18, 23, 24, 25, 30, 31].includes(dayNum)) {
+        // Mid-week peak stability
+        rate = 93.0 + wavePerf + randPerf;
+      } else {
+        // Other days
+        rate = 90.0 + wavePerf + randPerf;
+      }
+
+      return {
+        name,
+        actualVolume: Math.round(1200 * (rate / 100)),
+        avg_perf: +Math.min(100, Math.max(0, rate * scale)).toFixed(1)
+      };
     });
+
     monthlyQuality = tLabels.map((name, i) => {
-      const day = i + 1;
-      const fpy = (day === 12) ? 90.9 : 96.0 + Math.sin(day * 0.5) * 1.0;
-      return { name, avg_fpy: +(fpy * scale).toFixed(1), scrapPct: (day === 12) ? 8.5 : 1.2 };
+      const dayNum = parseInt(name);
+      const waveQual = Math.sin(dayNum * 0.45) * 0.8 + Math.cos(dayNum * 1.2) * 0.5;
+      const pseudoRand = (getSeedRandom(dayNum + 20) - 0.5) * 2;
+      const randQual = pseudoRand * 0.5;
+
+      let fpy = 97.0 + waveQual + randQual;
+      let scrapPct = 1.2;
+
+      if (dayNum === 5) {
+        fpy = 85.0;
+      } else if (dayNum === 15) {
+        // Downstream Quality Recalibration (replaces Sunday Day 14 quality drop)
+        fpy = 72.0;
+      } else if (dayNum === 22) {
+        fpy = 68.5;
+        scrapPct = 8.5; // Rejections spike
+      }
+
+      return {
+        name,
+        avg_fpy: +Math.min(100, Math.max(0, fpy * scale)).toFixed(1),
+        scrapPct
+      };
     });
   } else if (period === 'WTD') {
     const wtdAvails = [83.0, 85.0, 82.0, 87.0, 86.5];
@@ -126,6 +211,10 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
   }
 
   const monthlyOee = tLabels.map((name, i) => {
+    const dayNum = parseInt(name);
+    if (period === 'MTD' && dayNum === 5) {
+      return { name, value: 54.2 };
+    }
     const a = monthlyAvailability[i]?.avg_avail || 80;
     const p = monthlyPerformance[i]?.avg_perf || 80;
     const q = monthlyQuality[i]?.avg_fpy || 80;
@@ -139,30 +228,33 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
   }));
 
   const unplannedDowntimeTrendData = tLabels.map((name, i) => {
-    const isDay12 = (period === 'MTD' && i === 11);
+    const dayNum = parseInt(name);
+    const isIncident = (period === 'MTD' && dayNum === 13);
     return {
       name,
-      breakdown: isDay12 ? 480 : (isLW1 ? 480 : 180 + Math.round(Math.cos(i) * 30)),
-      mttr: isDay12 ? 90 : (isLW1 ? 45 : 22 + (i % 3)),
-      mtbf: isDay12 ? 5 : (isLW1 ? 18 : 36 - (i % 4))
+      breakdown: isIncident ? 270 : (isLW1 ? 480 : 180 + Math.round(Math.cos(i) * 30)),
+      mttr: isIncident ? 270 : (isLW1 ? 45 : 22 + (i % 3)),
+      mtbf: isIncident ? 4 : (isLW1 ? 18 : 36 - (i % 4))
     };
   });
 
   const cycleTaktStationData = tLabels.map((name, i) => {
-    const isDay12 = (period === 'MTD' && i === 11);
+    const dayNum = parseInt(name);
+    const isIncident = (period === 'MTD' && dayNum === 13);
     return {
       name,
-      setup: isDay12 ? 60 : (isLW1 ? 25 : 12 + (i % 2)),
-      processing: isDay12 ? 80 : (isLW1 ? 35 : 28 - (i % 3)),
+      setup: isIncident ? 60 : (isLW1 ? 25 : 12 + (i % 2)),
+      processing: isIncident ? 80 : (isLW1 ? 35 : 28 - (i % 3)),
       limit: 45
     };
   });
 
   const monthlyOutputPerManData = tLabels.map((name, i) => {
-    const isDay12 = (period === 'MTD' && i === 11);
+    const dayNum = parseInt(name);
+    const isIncident = (period === 'MTD' && dayNum === 13);
     return {
       name,
-      actual: isDay12 ? 20 : (isLW1 ? 90 : 120 + Math.round(Math.sin(i) * 10))
+      actual: isIncident ? 45 : (isLW1 ? 90 : 120 + Math.round(Math.sin(i) * 10))
     };
   });
 
@@ -176,13 +268,16 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
       planned = plans[i % 4];
       rework = reworks[i % 4];
     } else if (period === 'MTD') {
-      const day = i + 1;
-      if (day === 12) {
+      const dayNum = parseInt(name);
+      if (dayNum === 15) {
+        planned = 18;
+        rework = 12;
+      } else if (dayNum === 13) {
         planned = 8;
         rework = 6;
       } else {
-        planned = 18 + Math.round(Math.sin(day) * 3);
-        rework = 1 + Math.round(Math.cos(day) * 0.8 + 0.5);
+        planned = 18 + Math.round(Math.sin(dayNum) * 3);
+        rework = 1 + Math.round(Math.cos(dayNum) * 0.8 + 0.5);
       }
     } else if (period === 'WTD') {
       planned = [18, 22, 19, 21, 20][i % 5];
@@ -217,15 +312,19 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
       blowHoles = blowList[i % 4];
       gaps = gapsList[i % 4];
     } else if (period === 'MTD') {
-      const day = i + 1;
-      if (day === 12) {
+      const dayNum = parseInt(name);
+      if (dayNum === 22) {
+        burrs = 8;
+        blowHoles = 32;
+        gaps = 4;
+      } else if (dayNum === 13) {
         burrs = 25;
         blowHoles = 15;
         gaps = 8;
       } else {
-        burrs = 1 + Math.round(Math.sin(day) * 0.5 + 0.5);
-        blowHoles = Math.round(Math.cos(day) * 0.4 + 0.4);
-        gaps = Math.round(Math.sin(day * 1.5) * 0.2 + 0.2);
+        burrs = 1 + Math.round(Math.sin(dayNum) * 0.5 + 0.5);
+        blowHoles = Math.round(Math.cos(dayNum) * 0.4 + 0.4);
+        gaps = Math.round(Math.sin(dayNum * 1.5) * 0.2 + 0.2);
       }
     } else if (period === 'WTD') {
       burrs = [1, 2, 1, 3, 2][i % 5];
@@ -250,6 +349,14 @@ export function resolveOeeData(period: PeriodId, product: ProductId, process: st
       value: Math.round((burrs + blowHoles + gaps) * scale)
     };
   });
+
+  // Calculate dynamic average values for MTD period to propagate cleanly to Level 0/1/2 views
+  if (period === 'MTD' && monthlyAvailability.length > 0) {
+    availVal = +(monthlyAvailability.reduce((sum, item) => sum + item.avg_avail, 0) / monthlyAvailability.length).toFixed(1);
+    perfVal = +(monthlyPerformance.reduce((sum, item) => sum + item.avg_perf, 0) / monthlyPerformance.length).toFixed(1);
+    qualVal = +(monthlyQuality.reduce((sum, item) => sum + item.avg_fpy, 0) / monthlyQuality.length).toFixed(1);
+    oeeVal = +(monthlyOee.reduce((sum, item) => sum + item.value, 0) / monthlyOee.length).toFixed(1);
+  }
 
   const targetValue = isLW1 ? 70 : (product === 'MATRIX' ? 85 : (product === 'BANANA' ? 75 : 80));
 

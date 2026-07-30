@@ -1,15 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  ArrowLeft, ArrowRight, Settings, Layers, ShieldAlert, Package, Truck, GitBranch,
+  ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Settings, Layers, ShieldAlert, Package, Truck, GitBranch,
   FileText, Database, ShieldCheck, Calendar, ClipboardCheck, Cpu,
   Activity, Warehouse, TrendingDown, AlertOctagon, PackageCheck, GitCommit
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, Cell, ReferenceLine, Tooltip, LabelList } from 'recharts';
 import type { PageId } from './Sidebar';
 import { cn } from './ui/utils';
-import shopFloorBg from '../../assets/11.png';
+import shopFloorBg from '../../assets/Tiu-Plant.png';
 import lighthouseBg from '../../assets/21221.png';
-import { useFilter } from '../contexts/FilterContext';
+import { useFilter, ZONE_METADATA, default15ZoneCoords, defaultMasterControlTowerLayout, defaultContainerSettings, defaultCardCoords, defaultRadarCoords, MasterControlTowerLayout } from '../contexts/FilterContext';
 
 // 7-month YTD historical datasets with high natural variance (Jan to Jul)
 const oeeYtdData = [
@@ -512,7 +512,82 @@ function CompactKPICard({ card, isHovered, onHover, onClick, liveData, isPulsing
 }
 
 export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }: ExecutiveGatewayProps) {
-  const { calibratedIsometricCoords } = useFilter();
+  const { calibratedIsometricCoords, calibrated15ZoneCoords, setCalibrated15ZoneCoords, masterControlTowerLayout, setMasterControlTowerLayout } = useFilter();
+
+  const zone15ClipPaths = useMemo(() => {
+    const paths: Record<string, string> = {};
+    ZONE_METADATA.forEach(zone => {
+      const pts = calibrated15ZoneCoords[zone.id] || default15ZoneCoords[zone.id];
+      paths[zone.id] = `polygon(${pts.map(p => `${p.x}% ${p.y}%`).join(', ')})`;
+    });
+    return paths;
+  }, [calibrated15ZoneCoords]);
+
+  const zone15SvgPoints = useMemo(() => {
+    const svgPts: Record<string, string> = {};
+    ZONE_METADATA.forEach(zone => {
+      const pts = calibrated15ZoneCoords[zone.id] || default15ZoneCoords[zone.id];
+      svgPts[zone.id] = pts.map(p => `${p.x},${p.y}`).join(' ');
+    });
+    return svgPts;
+  }, [calibrated15ZoneCoords]);
+
+  const zone15Centroids = useMemo(() => {
+    const centroids: Record<string, { x: number; y: number }> = {};
+    ZONE_METADATA.forEach(zone => {
+      const pts = calibrated15ZoneCoords[zone.id] || default15ZoneCoords[zone.id];
+      const sumX = pts.reduce((acc, curr) => acc + curr.x, 0);
+      const sumY = pts.reduce((acc, curr) => acc + curr.y, 0);
+      centroids[zone.id] = { x: sumX / pts.length, y: sumY / pts.length };
+    });
+    return centroids;
+  }, [calibrated15ZoneCoords]);
+
+  const getZoneColorAlpha = (color: string, alphaHex: string) => {
+    if (!color) return `#0EA5E9${alphaHex}`;
+    const cleanHex = color.startsWith('#') ? color.slice(1, 7) : color.slice(0, 6);
+    return `#${cleanHex}${alphaHex}`;
+  };
+
+  // Exception-Based Limited Hotspots Engine (Max 2-3 Hotspots at a time)
+  // All other 12+ non-alert zones remain 100% transparent (opacity: 0) unless hovered via card/zone peek.
+  const EXCEPTION_HOTSPOTS = useMemo(() => {
+    return {
+      zone6: {
+        status: 'critical' as const,
+        tag: 'Critical Bottleneck Alert',
+        label: 'Post-Machining LW1 Welder Bottleneck (OEE < 70%)',
+        color: '#EF4444',
+        bgFill: 'rgba(239, 68, 68, 0.22)',
+        hoverBgFill: 'rgba(239, 68, 68, 0.45)',
+        borderColor: '#EF4444',
+        strokeWidth: '0.55',
+        shadow: 'drop-shadow(0 0 12px #EF4444)',
+      },
+      zone8: {
+        status: 'warning' as const,
+        tag: 'Secondary Warning',
+        label: 'CL1 Station Chemical Wash Queue Overrun',
+        color: '#F59E0B',
+        bgFill: 'rgba(245, 158, 11, 0.18)',
+        hoverBgFill: 'rgba(245, 158, 11, 0.38)',
+        borderColor: '#F59E0B',
+        strokeWidth: '0.45',
+        shadow: 'drop-shadow(0 0 8px #F59E0B)',
+      },
+      zone1: {
+        status: 'optimal' as const,
+        tag: 'Optimal Flow Peak',
+        label: 'Top Throughput OP-30 Line (BPR 94.2%)',
+        color: '#10B981',
+        bgFill: 'rgba(16, 185, 129, 0.12)',
+        hoverBgFill: 'rgba(16, 185, 129, 0.30)',
+        borderColor: '#10B981',
+        strokeWidth: '0.35',
+        shadow: 'drop-shadow(0 0 6px #10B981)',
+      },
+    };
+  }, []);
 
   const handleChartNodeClick = (monthName: string, redirectTarget: PageId) => {
     const shortMonthMap: Record<string, number> = {
@@ -609,7 +684,86 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
   const [hoveredCardId, setHoveredCardId] = useState<number | null>(null);
   const [gridHoveredBarIndex, setGridHoveredBarIndex] = useState<number | null>(null);
   const [gridHoveredCardId, setGridHoveredCardId] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'ISOMETRIC' | 'RADAR'>('RADAR');
+  const [viewMode, setViewMode] = useState<'ISOMETRIC' | 'RADAR' | 'CALIBRATION'>('RADAR');
+  const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null);
+  const [selectedCalibrationZone, setSelectedCalibrationZone] = useState<string>('zone1');
+  const [local15ZoneCoords, setLocal15ZoneCoords] = useState<IsometricZoneCoords>(() => {
+    return { ...calibrated15ZoneCoords };
+  });
+  const [activePinIndex, setActivePinIndex] = useState<number>(0);
+  const [showSavedToast, setShowSavedToast] = useState(false);
+  const [isMasterPlacementModeActive, setIsMasterPlacementModeActive] = useState<boolean>(true);
+  const [localMasterLayout, setLocalMasterLayout] = useState<MasterControlTowerLayout>(() => {
+    return { ...masterControlTowerLayout };
+  });
+
+  useEffect(() => {
+    setLocal15ZoneCoords({ ...calibrated15ZoneCoords });
+  }, [calibrated15ZoneCoords, viewMode]);
+
+  useEffect(() => {
+    setLocalMasterLayout({ ...masterControlTowerLayout });
+  }, [masterControlTowerLayout, viewMode]);
+
+  const containerScaleClass = useMemo(() => {
+    const mode = localMasterLayout.containerSettings?.scaleMode || 'stretch';
+    if (mode === 'contain') return 'bg-contain bg-center bg-no-repeat';
+    if (mode === 'cover') return 'bg-cover bg-center';
+    return 'bg-[length:100%_100%] bg-center bg-no-repeat';
+  }, [localMasterLayout.containerSettings?.scaleMode]);
+
+  const handleElementDrag = (
+    e: React.MouseEvent,
+    type: 'card' | 'radar',
+    id: string
+  ) => {
+    e.preventDefault();
+    const container = e.currentTarget.closest('.map-canvas-container') as HTMLElement;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const xPercent = +Math.min(92, Math.max(0, ((moveEvent.clientX - rect.left) / rect.width) * 100)).toFixed(1);
+      const yPercent = +Math.min(92, Math.max(0, ((moveEvent.clientY - rect.top) / rect.height) * 100)).toFixed(1);
+
+      setLocalMasterLayout(prev => {
+        if (type === 'card') {
+          return {
+            ...prev,
+            cardCoords: {
+              ...prev.cardCoords,
+              [id]: {
+                ...(prev.cardCoords[id] || { id, top: 0, left: 0 }),
+                left: xPercent,
+                top: yPercent,
+              }
+            }
+          };
+        } else {
+          return {
+            ...prev,
+            radarCoords: {
+              ...prev.radarCoords,
+              [id]: {
+                ...(prev.radarCoords[id] || { id, top: 0, left: 0 }),
+                left: xPercent,
+                top: yPercent,
+              }
+            }
+          };
+        }
+      });
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
   const [selectedRadarKpi, setSelectedRadarKpi] = useState<number>(1);
   const [expandedSection, setExpandedSection] = useState<'premachining' | 'postmachining' | null>(null);
   const [hoveredSection, setHoveredSection] = useState<'premachining' | 'postmachining' | null>(null);
@@ -1355,6 +1509,18 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
               Shop Floor Map
             </button>
 
+            <button
+              onClick={() => { setViewMode('CALIBRATION'); }}
+              className={cn(
+                "px-4 py-1.5 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-200 cursor-pointer",
+                viewMode === 'CALIBRATION'
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-800"
+              )}
+            >
+              UI Lab Sandbox
+            </button>
+
           </div>
         )}
 
@@ -1370,7 +1536,7 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
 
       {/* ── Main Content Grid ── */}
       <main className="relative z-10 flex-grow flex flex-col items-center justify-center px-8 py-6">
-        <div className="w-full max-w-7xl">
+        <div className="w-full max-w-[1500px]">
           {/* Header Introduction */}
           <div className="mb-6 text-center">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-transparent border border-emerald-500/20 text-[9px] font-extrabold text-emerald-600 tracking-wider uppercase mb-2">
@@ -1380,6 +1546,8 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
             <h2 className="text-2xl font-medium tracking-[0.05em] text-slate-900 uppercase">
               {activeViewMode === 'ISOMETRIC'
                 ? 'Operational Control Tower Map'
+                : activeViewMode === 'CALIBRATION'
+                ? 'UI Lab Isometric Calibration Sandbox'
                 : 'Manufacturing Control Tower'}
             </h2>
             {/* <p className="text-xs text-slate-500 mt-1 max-w-lg mx-auto">
@@ -1390,170 +1558,229 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
           </div>
 
           {activeViewMode === 'ISOMETRIC' ? (
-            /* ── ISOMETRIC 3D MAP VIEW (4 Layers) ── */
+            /* ── UPGRADED 15-ZONE ISOMETRIC 3D MAP VIEW ── */
             <div
-              className="relative w-full aspect-[16/9] bg-cover bg-center rounded-3xl border border-slate-200/50 shadow-[0_24px_60px_-15px_rgba(15,23,42,0.12)] overflow-hidden"
-              style={{ backgroundImage: `url(${shopFloorBg})` }}
+              className={cn(
+                "relative w-full rounded-2xl border border-slate-200/50 shadow-[0_24px_60px_-15px_rgba(15,23,42,0.12)] overflow-hidden transition-all duration-300",
+                containerScaleClass
+              )}
+              style={{
+                aspectRatio: localMasterLayout.containerSettings?.aspectRatio || 1.6,
+                backgroundImage: `url(${shopFloorBg})`,
+                paddingTop: `${localMasterLayout.containerSettings?.paddingY || 0}px`,
+                paddingBottom: `${localMasterLayout.containerSettings?.paddingY || 0}px`,
+              }}
             >
-              {/* Layer 1: Exception-Based Floor Zone Glows (Isometric Hotspots) */}
+              {/* Layer 1: SVG Dynamic Connector Leader Lines connecting Cards to Hotspots */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none z-20" viewBox="0 0 100 100" preserveAspectRatio="none">
+                {(() => {
+                  const prePos = localMasterLayout.cardCoords?.premachiningCard || { top: 25, left: 24 };
+                  const postPos = localMasterLayout.cardCoords?.postmachiningCard || { top: 52, left: 62 };
+                  const preTarget = zone15Centroids['zone1'] || { x: 20, y: 25 };
+                  const postTarget = zone15Centroids['zone6'] || { x: 55, y: 25 };
+                  return (
+                    <>
+                      <line
+                        x1={`${prePos.left + 5}%`}
+                        y1={`${prePos.top + 5}%`}
+                        x2={`${preTarget.x}%`}
+                        y2={`${preTarget.y}%`}
+                        stroke="#0EA5E9"
+                        strokeWidth="0.25"
+                        strokeDasharray="0.8 0.8"
+                        opacity="0.85"
+                      />
+                      <line
+                        x1={`${postPos.left + 5}%`}
+                        y1={`${postPos.top + 5}%`}
+                        x2={`${postTarget.x}%`}
+                        y2={`${postTarget.y}%`}
+                        stroke="#EC6530"
+                        strokeWidth="0.25"
+                        strokeDasharray="0.8 0.8"
+                        opacity="0.85"
+                      />
+                    </>
+                  );
+                })()}
+              </svg>
+
+              {/* Layer 2: Exception-Based Limited Hotspot Overlays (Max 3 Exception Zones Default) */}
               {(() => {
                 const isPreActive = filters.opSections?.premachining !== false;
                 const isPostActive = filters.opSections?.postMachining !== false;
-                const floorZones = [
-                  { id: 'production', clipPath: productionClipPath, svgPoints: productionSvgPoints },
-                  { id: 'warehouse', clipPath: warehouseClipPath, svgPoints: warehouseSvgPoints },
-                  { id: 'quality', clipPath: qualityClipPath, svgPoints: qualitySvgPoints },
-                  { id: 'process', clipPath: processClipPath, svgPoints: processSvgPoints },
-                  { id: 'shipping', clipPath: shippingClipPath, svgPoints: shippingSvgPoints },
-                  { id: 'material', clipPath: materialClipPath, svgPoints: materialSvgPoints },
-                ];
-                return floorZones.map(zone => {
-                  const style = getZoneGlowStyle(zone.id);
-                  if (!style) return null;
-                  const isZoneActive = 
-                    zone.id === 'production' ? isPreActive :
-                    zone.id === 'process' ? isPostActive :
-                    true;
+
+                return ZONE_METADATA.map(zone => {
+                  const pts = calibrated15ZoneCoords[zone.id] || default15ZoneCoords[zone.id];
+                  const clipPath = zone15ClipPaths[zone.id];
+                  const svgPoints = zone15SvgPoints[zone.id];
+                  const centroid = zone15Centroids[zone.id];
+                  
+                  const exceptionConfig = EXCEPTION_HOTSPOTS[zone.id as keyof typeof EXCEPTION_HOTSPOTS];
+                  const isExceptionHotspot = !!exceptionConfig;
+                  const isHovered = hoveredZoneId === zone.id;
+                  
+                  let isCategoryActive = true;
+                  if (zone.category === 'premachining') isCategoryActive = isPreActive;
+                  if (zone.category === 'postmachining') isCategoryActive = isPostActive;
+
+                  // Active if one of the 3 Exception Hotspots OR if user is hovering over card/zone (Dynamic Hover Peek)
+                  const isVisible = isCategoryActive && (isExceptionHotspot || isHovered);
+                  if (!isVisible && !isHovered) return null;
+
+                  const overlayColor = exceptionConfig?.color || zone.color;
+                  const bgFill = isHovered 
+                    ? (exceptionConfig ? exceptionConfig.hoverBgFill : getZoneColorAlpha(zone.color, '45'))
+                    : (exceptionConfig ? exceptionConfig.bgFill : getZoneColorAlpha(zone.color, '18'));
+                  
+                  const borderColor = exceptionConfig?.borderColor || zone.color;
+                  const strokeWidth = isHovered ? "0.6" : (exceptionConfig?.strokeWidth || "0.35");
+                  const shadowFilter = exceptionConfig?.shadow || `drop-shadow(0 0 6px ${zone.color})`;
+
                   return (
                     <div
-                      key={`zone-glow-${zone.id}`}
-                      className="absolute inset-0 pointer-events-none transition-opacity duration-[1000ms] ease-in-out z-10"
-                      style={{ opacity: isZoneActive ? 1.0 : 0.15 }}
+                      key={`zone-overlay-${zone.id}`}
+                      className="absolute inset-0 transition-opacity duration-300 z-10"
+                      style={{ opacity: isVisible ? 1.0 : 0 }}
+                      onMouseEnter={() => setHoveredZoneId(zone.id)}
+                      onMouseLeave={() => setHoveredZoneId(null)}
                     >
                       <div
-                        className="w-full h-full animate-[pulse_3s_ease-in-out_infinite]"
+                        className="w-full h-full transition-all duration-300 cursor-pointer"
                         style={{
-                          clipPath: zone.clipPath,
-                          background: style.glow,
+                          clipPath: clipPath,
+                          background: bgFill,
                         }}
                       />
-                      <svg className="absolute inset-0 w-full h-full animate-[pulse_3s_ease-in-out_infinite]" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        {/* Glow underlay */}
+                      
+                      <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
                         <polygon
-                          points={zone.svgPoints}
+                          points={svgPoints}
                           fill="none"
-                          stroke={style.stroke}
-                          strokeWidth="0.6"
-                          opacity={style.isCritical ? 0.6 : 0.05}
-                          style={{ filter: 'blur(2px)' }}
-                        />
-                        {/* Sharp 2px border */}
-                        <polygon
-                          points={zone.svgPoints}
-                          fill="none"
-                          stroke={style.stroke}
-                          strokeWidth="0.2"
-                          opacity={style.isCritical ? 1.0 : 0.05}
+                          stroke={borderColor}
+                          strokeWidth={strokeWidth}
+                          opacity={isHovered ? 1.0 : 0.85}
+                          className={exceptionConfig?.status === 'critical' || isHovered ? "animate-pulse" : ""}
+                          style={{
+                            filter: shadowFilter,
+                          }}
                         />
                       </svg>
+
+                      {centroid && (
+                        <div
+                          className="absolute pointer-events-none"
+                          style={{
+                            top: `${centroid.y}%`,
+                            left: `${centroid.x}%`,
+                            transform: 'translate(-50%, -50%)',
+                          }}
+                        >
+                          <span className="absolute inline-flex h-4.5 w-4.5 rounded-full opacity-75 animate-ping" style={{ backgroundColor: overlayColor }} />
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 shadow-md border border-white/80" style={{ backgroundColor: overlayColor }} />
+                        </div>
+                      )}
                     </div>
                   );
                 });
               })()}
 
-              {/* Layer 2: Pulsing Floor Hotspots (Omitted in Section-Level Analytics mode for visual clarity) */}
-
-              {/* Layer 3: SVG Leader Lines and Zone Borders */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none z-20" viewBox="0 0 100 100" preserveAspectRatio="none">
-                {/* Continuous or pulsing Floor Zone SVG Borders */}
-                {(() => {
-                  const isPreActive = filters.opSections?.premachining !== false;
-                  const isPostActive = filters.opSections?.postMachining !== false;
-                  const floorZones = [
-                    { id: 'production', svgPoints: productionSvgPoints },
-                    { id: 'warehouse', svgPoints: warehouseSvgPoints },
-                    { id: 'quality', svgPoints: qualitySvgPoints },
-                    { id: 'process', svgPoints: processSvgPoints },
-                    { id: 'shipping', svgPoints: shippingSvgPoints },
-                    { id: 'material', svgPoints: materialSvgPoints },
-                  ];
-                  return floorZones.map(zone => {
-                    const style = getZoneGlowStyle(zone.id);
-                    if (!style) return null;
-                    const isContinuous = viewMode === 'ISOMETRIC';
-                    const isZoneActive = 
-                      zone.id === 'production' ? isPreActive :
-                      zone.id === 'process' ? isPostActive :
-                      true;
-                    return (
-                      <polygon
-                        key={`zone-border-${zone.id}`}
-                        points={zone.svgPoints}
-                        fill="none"
-                        stroke={style.stroke}
-                        strokeWidth="0.2"
-                        className={isContinuous && !style.isCritical ? "" : "animate-pulse"}
-                        opacity={isZoneActive ? (style.isCritical ? 1.0 : 0.05) : 0.01}
-                        style={{
-                          filter: style.isCritical && isZoneActive ? `drop-shadow(0 0 4px ${style.stroke})` : 'none',
-                        }}
-                      />
-                    );
-                  });
-                })()}
-              </svg>
+              {/* Layer 3: Floating Hover Tooltips */}
+              {hoveredZoneId && (() => {
+                const zone = ZONE_METADATA.find(z => z.id === hoveredZoneId);
+                const centroid = zone15Centroids[hoveredZoneId];
+                if (!zone || !centroid) return null;
+                return (
+                  <div
+                    className="absolute z-35 pointer-events-none transition-all duration-200 select-none flex flex-col items-center"
+                    style={{
+                      top: `${centroid.y}%`,
+                      left: `${centroid.x}%`,
+                      transform: 'translate(-50%, -125%)',
+                    }}
+                  >
+                    <div className="bg-slate-900/90 backdrop-blur-md text-white border border-slate-700/50 rounded-xl px-3 py-2 shadow-2xl flex flex-col gap-0.5 text-center min-w-[160px]">
+                      <span className="text-[7px] font-black tracking-widest text-sky-400 uppercase">
+                        {zone.category.replace('machining', ' Machining').toUpperCase()}
+                      </span>
+                      <span className="text-[9.5px] font-black uppercase tracking-tight">
+                        {zone.id.replace('zone', 'Zone ')}: {zone.name}
+                      </span>
+                      <span className="text-[8px] text-slate-300 font-bold mt-0.5">
+                        Workstations: {zone.workstations}
+                      </span>
+                    </div>
+                    <div className="w-2.5 h-2.5 bg-slate-900/90 border-r border-b border-slate-700/50 rotate-45 -mt-1.5" />
+                  </div>
+                );
+              })()}
 
               {/* Layer 4: General Plant-Wide Index command card */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '15%',
-                  left: '2%',
-                  width: '18%',
-                  zIndex: 40,
-                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(56, 189, 248, 0.25)',
-                  background: 'rgba(15, 23, 42, 0.88)',
-                  backdropFilter: 'blur(16px)',
-                  borderRadius: '20px',
-                }}
-                className="p-4 flex flex-col gap-3.5 select-none"
-              >
-                {(() => {
-                  const cmdData = getCommandCardData();
-                  return (
-                    <>
-                      <div className="border-b border-slate-800 pb-2">
-                        <span className="text-[8px] font-bold tracking-[0.1em] text-[#38BDF8] uppercase block mb-1">ATLAS CONTROL TOWER</span>
-                        <h3 className="text-[13px] font-black text-white uppercase tracking-tight">{cmdData.title}</h3>
-                        <span className="text-[9px] text-[#94A3B8] font-bold">Tata Toyo Radiator (Chakan)</span>
-                      </div>
-
-                      <div className="flex flex-col gap-2.5">
-                        {cmdData.rows.map((row, idx) => (
-                          <div key={`cmd-row-${idx}`}>
-                            <div className="flex justify-between items-baseline text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">
-                              <span>{row.label}</span>
-                              <span className="text-white font-black">{row.valText}</span>
-                            </div>
-                            <div className="relative w-full bg-slate-800/80 h-1 rounded-full mt-1.5">
-                              <div className="h-full rounded-full relative" style={{ width: `${Math.min(100, Math.max(0, row.pct))}%`, backgroundColor: row.color }}>
-                                <div 
-                                  className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full shadow-[0_0_8px_#38BDF8]" 
-                                  style={{ 
-                                    transform: 'translate(50%, -50%)', 
-                                    backgroundColor: row.color === '#EF4444' ? '#FCA5A5' : '#E0F2FE' 
-                                  }} 
-                                />
-                              </div>
-                            </div>
+              {(() => {
+                const cmdPos = localMasterLayout.cardCoords?.atlasCommandCard || { top: 15, left: 2 };
+                return (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: `${cmdPos.top}%`,
+                      left: `${cmdPos.left}%`,
+                      width: `${cmdPos.width || 240}px`,
+                      zIndex: 40,
+                      boxShadow: '0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 10px 10px -5px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(226, 232, 240, 0.8)',
+                      border: '1px solid rgba(226, 232, 240, 0.8)',
+                      background: 'rgba(255, 255, 255, 0.85)',
+                      backdropFilter: 'blur(16px)',
+                      borderRadius: '20px',
+                    }}
+                    className="p-4 flex flex-col gap-3.5 select-none"
+                  >
+                    {(() => {
+                      const cmdData = getCommandCardData();
+                      return (
+                        <>
+                          <div className="border-b border-slate-100 pb-2">
+                            <span className="text-[8px] font-bold tracking-[0.1em] text-[#0284C7] uppercase block mb-1">ATLAS CONTROL TOWER</span>
+                            <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-tight">{cmdData.title}</h3>
+                            <span className="text-[9px] text-[#64748B] font-bold">Tata Toyo Radiator (Chakan)</span>
                           </div>
-                        ))}
-                      </div>
-                    </>
-                  );
-                })()}
 
-                <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-2 text-[8px] font-bold uppercase text-slate-400 tracking-wider flex justify-between items-center">
-                  <span>SYSTEM STATUS:</span>
-                  <span className="text-[#38BDF8] flex items-center gap-1 font-black">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34D399]" />
-                    ONLINE
-                  </span>
-                </div>
-              </div>
+                          <div className="flex flex-col gap-2.5">
+                            {cmdData.rows.map((row, idx) => (
+                              <div key={`cmd-row-${idx}`}>
+                                <div className="flex justify-between items-baseline text-[8.5px] font-bold text-slate-600 uppercase tracking-wider">
+                                  <span>{row.label}</span>
+                                  <span className="text-slate-800 font-black">{row.valText}</span>
+                                </div>
+                                <div className="relative w-full bg-slate-100 h-1 rounded-full mt-1.5">
+                                  <div className="h-full rounded-full relative" style={{ width: `${Math.min(100, Math.max(0, row.pct))}%`, backgroundColor: row.color }}>
+                                    <div 
+                                      className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white border shadow-sm" 
+                                      style={{ 
+                                        transform: 'translate(50%, -50%)', 
+                                        borderColor: row.color
+                                      }} 
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
 
-              {/* Layer 4: Absolute-positioned Section-Level KPI Cards (Anchored over floor zones) */}
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-2 text-[8px] font-bold uppercase text-slate-500 tracking-wider flex justify-between items-center">
+                      <span>SYSTEM STATUS:</span>
+                      <span className="text-[#0284C7] flex items-center gap-1 font-black">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_4px_#10B981]" />
+                        ONLINE
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Layer 5: Absolute-positioned Section-Level KPI Cards (Anchored over floor zones) */}
               {getSectionCards().map((sc, scIdx) => {
                 const isPremachining = scIdx === 0;
                 const isCardExpanded = isPremachining 
@@ -1564,11 +1791,8 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                   : hoveredSection === 'postmachining';
                 const isCardActive = isCardExpanded || isCardHovered;
                 
-                // Anchored coordinates
-                // Premachining: top-left area. Post-machining: bottom-right / Assembly area
-                const cardCoord = isPremachining 
-                  ? { top: 25, left: 24 } 
-                  : { top: 52, left: 62 };
+                const cardKey = isPremachining ? 'premachiningCard' : 'postmachiningCard';
+                const cardCoord = localMasterLayout.cardCoords?.[cardKey] || (isPremachining ? { top: 25, left: 24 } : { top: 52, left: 62 });
 
                 return (
                   <div
@@ -1606,6 +1830,422 @@ export function ExecutiveGateway({ onEnterDashboard, onBack, filters, onChange }
                   </div>
                 );
               })}
+            </div>
+          ) : activeViewMode === 'CALIBRATION' ? (
+            /* ── MASTER FLOOR & CARD PLACEMENT STUDIO ── */
+            <div className="w-full flex flex-col lg:flex-row gap-6 items-stretch">
+              {/* Left Column: Interactive Shop Floor Calibration Map Canvas */}
+              <div className="flex-1 bg-white border border-slate-200/60 rounded-3xl p-4 shadow-sm flex flex-col gap-3">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                  <div>
+                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Master Placement Studio Canvas</h3>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Drag cards, hotspots, or zone pins across the 3D map canvas</p>
+                  </div>
+                  {showSavedToast && (
+                    <div className="px-3 py-1 bg-emerald-500 text-white rounded-lg text-[9px] font-black tracking-widest uppercase animate-pulse shadow-sm">
+                      Master Layout Saved Globally!
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  className={cn(
+                    "map-canvas-container relative w-full rounded-2xl border border-slate-200 shadow-inner overflow-hidden select-none transition-all duration-300",
+                    containerScaleClass
+                  )}
+                  style={{
+                    aspectRatio: localMasterLayout.containerSettings?.aspectRatio || 1.6,
+                    backgroundImage: `url(${shopFloorBg})`,
+                    paddingTop: `${localMasterLayout.containerSettings?.paddingY || 0}px`,
+                    paddingBottom: `${localMasterLayout.containerSettings?.paddingY || 0}px`,
+                  }}
+                >
+                  <div className="absolute inset-0 pointer-events-none bg-slate-900/5 backdrop-blur-[0.5px]" />
+
+                  {/* SVG Dynamic Connector Leader Lines Layer */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none z-20" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    {(() => {
+                      const prePos = localMasterLayout.cardCoords?.premachiningCard || { top: 25, left: 24 };
+                      const postPos = localMasterLayout.cardCoords?.postmachiningCard || { top: 52, left: 62 };
+                      const preTarget = zone15Centroids['zone1'] || { x: 20, y: 25 };
+                      const postTarget = zone15Centroids['zone6'] || { x: 55, y: 25 };
+                      return (
+                        <>
+                          <line
+                            x1={`${prePos.left + 5}%`}
+                            y1={`${prePos.top + 5}%`}
+                            x2={`${preTarget.x}%`}
+                            y2={`${preTarget.y}%`}
+                            stroke="#0EA5E9"
+                            strokeWidth="0.35"
+                            strokeDasharray="1 1"
+                          />
+                          <line
+                            x1={`${postPos.left + 5}%`}
+                            y1={`${postPos.top + 5}%`}
+                            x2={`${postTarget.x}%`}
+                            y2={`${postTarget.y}%`}
+                            stroke="#EC6530"
+                            strokeWidth="0.35"
+                            strokeDasharray="1 1"
+                          />
+                        </>
+                      );
+                    })()}
+                  </svg>
+
+                  {/* SVG overlay of 15 zones with darker, high-contrast tint & strokes */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    {ZONE_METADATA.map(zone => {
+                      const isCurrent = zone.id === selectedCalibrationZone;
+                      const pts = local15ZoneCoords[zone.id] || default15ZoneCoords[zone.id];
+                      const ptsStr = pts.map(p => `${p.x},${p.y}`).join(' ');
+                      return (
+                        <polygon
+                          key={`calib-poly-${zone.id}`}
+                          points={ptsStr}
+                          fill={isCurrent ? getZoneColorAlpha(zone.color, '45') : getZoneColorAlpha(zone.color, '20')}
+                          stroke={getZoneColorAlpha(zone.color, 'FF')}
+                          strokeWidth={isCurrent ? "0.65" : "0.35"}
+                          opacity={isCurrent ? 1.0 : 0.65}
+                          style={{
+                            filter: isCurrent ? `drop-shadow(0 0 8px ${getZoneColorAlpha(zone.color, 'FF')})` : `drop-shadow(0 0 2px ${getZoneColorAlpha(zone.color, '60')})`
+                          }}
+                        />
+                      );
+                    })}
+                  </svg>
+
+                  {/* Draggable Zone Handle Pins */}
+                  {(() => {
+                    const activePts = local15ZoneCoords[selectedCalibrationZone] || default15ZoneCoords[selectedCalibrationZone];
+                    const activeZone = ZONE_METADATA.find(z => z.id === selectedCalibrationZone);
+                    const color = activeZone?.color || '#0EA5E9';
+                    return activePts.map((pt, idx) => {
+                      const isActivePin = activePinIndex === idx;
+                      return (
+                        <div
+                          key={`handle-pin-${idx}`}
+                          className="absolute z-30 flex flex-col items-center cursor-move"
+                          style={{
+                            left: `${pt.x}%`,
+                            top: `${pt.y}%`,
+                            transform: 'translate(-50%, -50%)',
+                          }}
+                          onMouseDown={(e) => {
+                            setActivePinIndex(idx);
+                            e.preventDefault();
+                            const container = e.currentTarget.closest('.map-canvas-container') as HTMLElement;
+                            if (!container) return;
+                            const rect = container.getBoundingClientRect();
+
+                            const handleMouseMove = (moveEvent: MouseEvent) => {
+                              const xPercent = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+                              const yPercent = ((moveEvent.clientY - rect.top) / rect.height) * 100;
+                              
+                              setLocal15ZoneCoords(prev => {
+                                const updated = { ...prev };
+                                const pts = [...(updated[selectedCalibrationZone] || default15ZoneCoords[selectedCalibrationZone])];
+                                pts[idx] = {
+                                  x: +Math.min(100, Math.max(0, xPercent)).toFixed(1),
+                                  y: +Math.min(100, Math.max(0, yPercent)).toFixed(1)
+                                };
+                                updated[selectedCalibrationZone] = pts;
+                                return updated;
+                              });
+                            };
+
+                            const handleMouseUp = () => {
+                              document.removeEventListener('mousemove', handleMouseMove);
+                              document.removeEventListener('mouseup', handleMouseUp);
+                            };
+
+                            document.addEventListener('mousemove', handleMouseMove);
+                            document.addEventListener('mouseup', handleMouseUp);
+                          }}
+                        >
+                          <div
+                            className={cn(
+                              "w-5 h-5 rounded-full border-2 flex items-center justify-center font-black text-[9px] shadow-lg transition-all",
+                              isActivePin
+                                ? "bg-slate-900 border-white text-white scale-110 ring-4"
+                                : "bg-white text-slate-800"
+                            )}
+                            style={{
+                              borderColor: isActivePin ? '#FFFFFF' : color,
+                              boxShadow: isActivePin ? `0 0 10px ${color}` : 'none'
+                            }}
+                          >
+                            {idx + 1}
+                          </div>
+                          <div className="mt-1 bg-slate-900/90 text-white font-mono text-[7px] px-1 py-0.5 rounded shadow-sm border border-slate-700/50">
+                            {pt.x}%, {pt.y}%
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+
+                  {/* Draggable Cards on Canvas when Master Placement Mode is active */}
+                  {isMasterPlacementModeActive && (() => {
+                    const cardsToRender = [
+                      { id: 'premachiningCard', name: 'Premachining Card', color: '#0EA5E9' },
+                      { id: 'postmachiningCard', name: 'Assembly Card', color: '#EC6530' },
+                      { id: 'atlasCommandCard', name: 'ATLAS Index Card', color: '#0284C7' },
+                    ];
+                    return cardsToRender.map(cardItem => {
+                      const pos = localMasterLayout.cardCoords?.[cardItem.id] || { top: 30, left: 30 };
+                      return (
+                        <div
+                          key={`draggable-card-${cardItem.id}`}
+                          className="absolute z-40 cursor-grab active:cursor-grabbing border-2 rounded-2xl p-2 bg-white/90 backdrop-blur-md shadow-2xl transition-shadow hover:ring-4 hover:ring-blue-400/50"
+                          style={{
+                            top: `${pos.top}%`,
+                            left: `${pos.left}%`,
+                            width: `${pos.width || 200}px`,
+                            borderColor: cardItem.color,
+                          }}
+                          onMouseDown={(e) => handleElementDrag(e, 'card', cardItem.id)}
+                        >
+                          <div className="flex justify-between items-center pb-1 border-b border-slate-200/80 mb-1 pointer-events-none select-none">
+                            <span className="text-[9px] font-black uppercase text-slate-800 flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cardItem.color }} />
+                              {cardItem.name}
+                            </span>
+                            <span className="text-[7.5px] font-mono font-bold text-slate-500">
+                              {pos.left}%, {pos.top}%
+                            </span>
+                          </div>
+                          <p className="text-[7.5px] font-bold text-slate-500 uppercase tracking-tight pointer-events-none select-none">
+                            Drag anywhere to position over 3D floor map
+                          </p>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Right Column: Master Placement & Calibration Studio Control Panel */}
+              <div className="w-full lg:w-[340px] bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm flex flex-col justify-between select-none gap-4">
+                <div className="flex flex-col gap-4 overflow-y-auto max-h-[750px] pr-1">
+                  <div className="border-b border-slate-100 pb-2.5">
+                    <span className="text-[7.5px] font-black tracking-widest text-[#0284C7] uppercase block mb-1">Layout Studio</span>
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Master Placement Studio</h3>
+                  </div>
+
+                  {/* 1. Placement Mode Toggle */}
+                  <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                    <div>
+                      <span className="text-[9.5px] font-black uppercase text-slate-800 block">Master Drag & Drop</span>
+                      <span className="text-[7.5px] font-bold text-slate-400 uppercase">Enable card & dot dragging</span>
+                    </div>
+                    <button
+                      onClick={() => setIsMasterPlacementModeActive(!isMasterPlacementModeActive)}
+                      className={cn(
+                        "px-3 py-1 rounded-full text-[9px] font-black tracking-wider uppercase transition-all cursor-pointer shadow-sm",
+                        isMasterPlacementModeActive
+                          ? "bg-emerald-500 text-white"
+                          : "bg-slate-200 text-slate-600"
+                      )}
+                    >
+                      {isMasterPlacementModeActive ? "ACTIVE" : "OFF"}
+                    </button>
+                  </div>
+
+                  {/* 2. Live Container Framing & Scaling Sliders */}
+                  <div className="flex flex-col gap-3 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80">
+                    <span className="text-[8.5px] font-black uppercase tracking-wider text-slate-400">1. Container Aspect Ratio & Scale Controls</span>
+
+                    {/* Aspect Ratio Slider */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[9px] font-bold text-slate-600 uppercase">
+                        <span>Aspect Ratio</span>
+                        <span className="text-blue-600 font-black">{localMasterLayout.containerSettings?.aspectRatio || 1.6}:1</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1.3"
+                        max="2.0"
+                        step="0.05"
+                        value={localMasterLayout.containerSettings?.aspectRatio || 1.6}
+                        onChange={(e) => {
+                          const val = +parseFloat(e.target.value).toFixed(2);
+                          setLocalMasterLayout(prev => ({
+                            ...prev,
+                            containerSettings: {
+                              ...(prev.containerSettings || defaultContainerSettings),
+                              aspectRatio: val,
+                            }
+                          }));
+                        }}
+                        className="w-full accent-blue-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Scale Mode Selector */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[8.5px] font-bold text-slate-500 uppercase">Background Scale Mode</label>
+                      <div className="grid grid-cols-3 gap-1">
+                        {(['stretch', 'contain', 'cover'] as const).map(mode => (
+                          <button
+                            key={mode}
+                            onClick={() => {
+                              setLocalMasterLayout(prev => ({
+                                ...prev,
+                                containerSettings: {
+                                  ...(prev.containerSettings || defaultContainerSettings),
+                                  scaleMode: mode,
+                                }
+                              }));
+                            }}
+                            className={cn(
+                              "py-1 text-[8px] font-black uppercase rounded-lg border transition-all cursor-pointer text-center",
+                              localMasterLayout.containerSettings?.scaleMode === mode
+                                ? "bg-slate-900 border-slate-900 text-white shadow-sm"
+                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                            )}
+                          >
+                            {mode === 'stretch' ? '100% 100%' : mode}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Padding Y Slider */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[9px] font-bold text-slate-600 uppercase">
+                        <span>Vertical Padding</span>
+                        <span className="text-blue-600 font-black">{localMasterLayout.containerSettings?.paddingY || 0}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="48"
+                        step="4"
+                        value={localMasterLayout.containerSettings?.paddingY || 0}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          setLocalMasterLayout(prev => ({
+                            ...prev,
+                            containerSettings: {
+                              ...(prev.containerSettings || defaultContainerSettings),
+                              paddingY: val,
+                            }
+                          }));
+                        }}
+                        className="w-full accent-blue-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 3. 15-Zone Polygon Calibration Engine */}
+                  <div className="flex flex-col gap-3 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80">
+                    <span className="text-[8.5px] font-black uppercase tracking-wider text-slate-400">2. 15-Zone Polygon Calibration</span>
+
+                    {/* Zone Dropdown */}
+                    <div className="flex flex-col gap-1">
+                      <select
+                        value={selectedCalibrationZone}
+                        onChange={(e) => {
+                          setSelectedCalibrationZone(e.target.value);
+                          setActivePinIndex(0);
+                        }}
+                        className="w-full pl-3 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer"
+                      >
+                        {ZONE_METADATA.map(zone => (
+                          <option key={zone.id} value={zone.id}>
+                            {zone.id.replace('zone', '')}. {zone.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Active Pin Switcher */}
+                    <div className="grid grid-cols-4 gap-1">
+                      {[0, 1, 2, 3].map(idx => (
+                        <button
+                          key={idx}
+                          onClick={() => setActivePinIndex(idx)}
+                          className={cn(
+                            "py-1 rounded-lg text-[8.5px] font-black uppercase border transition-all cursor-pointer text-center",
+                            activePinIndex === idx
+                              ? "bg-slate-800 border-slate-800 text-white shadow-sm"
+                              : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                          )}
+                        >
+                          Pin {idx + 1}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Directional Nudge Buttons */}
+                    <div className="flex flex-col items-center gap-1.5 pt-1">
+                      <div className="relative w-28 h-28 flex items-center justify-center bg-white rounded-full border border-slate-200 shadow-inner">
+                        <button
+                          onClick={() => nudgeActivePin(0, -0.1)}
+                          className="absolute top-1.5 w-7 h-7 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 active:scale-95 transition-all shadow-sm cursor-pointer"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => nudgeActivePin(-0.1, 0)}
+                          className="absolute left-1.5 w-7 h-7 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 active:scale-95 transition-all shadow-sm cursor-pointer"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => nudgeActivePin(0.1, 0)}
+                          className="absolute right-1.5 w-7 h-7 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 active:scale-95 transition-all shadow-sm cursor-pointer"
+                        >
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => nudgeActivePin(0, 0.1)}
+                          className="absolute bottom-1.5 w-7 h-7 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 active:scale-95 transition-all shadow-sm cursor-pointer"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        <div className="w-9 h-9 bg-slate-50 rounded-full flex flex-col items-center justify-center border border-slate-200">
+                          <span className="text-[6.5px] text-slate-400 font-extrabold uppercase">Pin</span>
+                          <span className="text-[10px] font-black text-slate-800">#{activePinIndex + 1}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Global Serialization Actions */}
+                <div className="flex flex-col gap-2 border-t border-slate-100 pt-3 mt-2">
+                  <button
+                    onClick={() => {
+                      const layoutToSave: MasterControlTowerLayout = {
+                        ...localMasterLayout,
+                        polygonCoords: local15ZoneCoords,
+                      };
+                      setMasterControlTowerLayout(layoutToSave);
+                      setCalibrated15ZoneCoords(local15ZoneCoords);
+                      setShowSavedToast(true);
+                      setTimeout(() => setShowSavedToast(false), 3000);
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-[10px] tracking-wider uppercase shadow-[0_4px_12px_rgba(37,99,235,0.2)] hover:shadow-[0_6px_16px_rgba(37,99,235,0.35)] transition-all cursor-pointer"
+                  >
+                    Save All Placements Globally
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm("Reset layout & placements to default positions?")) {
+                        setLocalMasterLayout({ ...defaultMasterControlTowerLayout });
+                        setLocal15ZoneCoords({ ...default15ZoneCoords });
+                        setMasterControlTowerLayout(defaultMasterControlTowerLayout);
+                      }
+                    }}
+                    className="w-full py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-700 font-bold text-[8.5px] tracking-wider uppercase transition-all cursor-pointer"
+                  >
+                    Reset All Layout Defaults
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             /* ── L0 GATEWAY "LIGHTHOUSE RADAR" VIEW ── */

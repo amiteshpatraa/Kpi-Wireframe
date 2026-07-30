@@ -27,6 +27,7 @@ import {
   Pin,
   PinOff,
 } from 'lucide-react';
+
 import { CardLockHeader, lockedCardStyle } from './CardLockHeader';
 import { usePageCardLocks } from './useCardFilterLock';
 import { PILLARS, WARRANTY_CLAIMS, type ActiveCopqPillar } from '../data/dataStores/copqDataStore';
