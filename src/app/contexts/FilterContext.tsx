@@ -42,21 +42,21 @@ export interface ZoneMetadata {
 }
 
 export const ZONE_METADATA: ZoneMetadata[] = [
-  { id: 'zone1', name: 'OP-30', category: 'premachining', color: '#0EA5E9', workstations: 'VMC1, SF01, UC1' },
-  { id: 'zone2', name: 'OP-40', category: 'premachining', color: '#0EA5E9', workstations: 'OP10, OP20' },
-  { id: 'zone3', name: 'Heavy Machining Cell', category: 'premachining', color: '#0EA5E9', workstations: 'OP30, OP40, OP50' },
-  { id: 'zone4', name: 'Tube Bending & Slitting Line', category: 'premachining', color: '#0EA5E9', workstations: 'SLGL, SB10' },
-  { id: 'zone5', name: 'Brazing & Heat Prep', category: 'premachining', color: '#0EA5E9', workstations: 'BRZ, RSHP' },
-  { id: 'zone6', name: 'Laser Welder LW1 Bay', category: 'postmachining', color: '#EC6530', workstations: 'LW1' },
-  { id: 'zone7', name: 'LW2 & LW3 Bay', category: 'postmachining', color: '#EC6530', workstations: 'LW2, LW3' },
-  { id: 'zone8', name: 'Chemical Cleaning Station', category: 'postmachining', color: '#EC6530', workstations: 'CL1 / CLNC' },
-  { id: 'zone9', name: 'Leak Testing & Sub-Assembly', category: 'postmachining', color: '#EC6530', workstations: 'UC2, ALT10' },
-  { id: 'zone10', name: 'Final Assembly & End-of-Line', category: 'postmachining', color: '#EC6530', workstations: 'EOL' },
-  { id: 'zone11', name: 'Packaging & Bundling', category: 'postmachining', color: '#EC6530', workstations: 'PACK' },
-  { id: 'zone12', name: 'Inward Raw Material Yard', category: 'logistics', color: '#10B981', workstations: 'Bottom-left storage' },
-  { id: 'zone13', name: 'High-Bay Warehouse Racks', category: 'logistics', color: '#10B981', workstations: 'Warehouse Racks' },
-  { id: 'zone14', name: 'Quality Metrology Lab', category: 'quality', color: '#8B5CF6', workstations: 'Quality Lab' },
-  { id: 'zone15', name: 'Outbound Shipping Docks', category: 'shipping', color: '#F59E0B', workstations: 'Truck bays' },
+  { id: 'zone1',  name: 'OP-30 & OP-40',              category: 'postmachining', color: '#EC6530', workstations: 'OP30, OP40' },
+  { id: 'zone2',  name: 'OP-30 & 40 B',               category: 'postmachining', color: '#EC6530', workstations: 'OP30, OP40' },
+  { id: 'zone3',  name: 'OP10 & OP20',                category: 'premachining',  color: '#0EA5E9', workstations: 'OP10, OP20' },
+  { id: 'zone4',  name: 'Soldering & Gluing',         category: 'postmachining', color: '#EC6530', workstations: 'SLGL, SB10' },
+  { id: 'zone5',  name: 'Brazing & Shot Blasting',    category: 'premachining',  color: '#0EA5E9', workstations: 'BRZ, RSHP' },
+  { id: 'zone6',  name: 'LW1 Area',                   category: 'premachining',  color: '#0EA5E9', workstations: 'LW1' },
+  { id: 'zone7',  name: 'LW2 & LW3 Bay',              category: 'premachining',  color: '#0EA5E9', workstations: 'LW2, LW3' },
+  { id: 'zone8',  name: 'Ultrasonic Cleaning Station', category: 'premachining',  color: '#0EA5E9', workstations: 'CL1, UC1' },
+  { id: 'zone9',  name: 'Air Leak Testing',           category: 'postmachining', color: '#EC6530', workstations: 'UC2, ALT10' },
+  { id: 'zone10', name: 'End-of-Line',                category: 'postmachining', color: '#EC6530', workstations: 'EOL' },
+  { id: 'zone11', name: 'Packaging',                  category: 'postmachining', color: '#EC6530', workstations: 'PACK' },
+  { id: 'zone12', name: 'Inward Raw Material Yard',   category: 'premachining',  color: '#10B981', workstations: 'Bottom-left storage' },
+  { id: 'zone13', name: 'Warehouse Racks',            category: 'premachining',  color: '#10B981', workstations: 'Warehouse Racks' },
+  { id: 'zone14', name: 'Quality Lab',                category: 'postmachining', color: '#8B5CF6', workstations: 'Quality Lab' },
+  { id: 'zone15', name: 'Finished Good Inventory',    category: 'postmachining', color: '#F59E0B', workstations: 'Truck bays' },
 ];
 
 export const defaultIsometricCoords: IsometricZoneCoords = {
@@ -99,22 +99,27 @@ export const defaultIsometricCoords: IsometricZoneCoords = {
 };
 
 export const default15ZoneCoords: IsometricZoneCoords = {
-  zone1:  [{ x: 32.5, y: 56.8 }, { x: 53.0, y: 57.1 }, { x: 53.2, y: 78.0 }, { x: 31.6, y: 78.2 }],
-  zone2:  [{ x: 53.7, y: 57.5 }, { x: 67.3, y: 57.5 }, { x: 67.5, y: 78.5 }, { x: 54.0, y: 78.3 }],
+  zone1:  [{ x: 32.5, y: 56.8 }, { x: 53.0, y: 57.2 }, { x: 53.2, y: 78.5 }, { x: 31.6, y: 78.2 }],
+  zone2:  [{ x: 53.7, y: 57.5 }, { x: 67.3, y: 57.5 }, { x: 67.9, y: 78.5 }, { x: 54.0, y: 78.3 }],
   zone3:  [{ x: 13.6, y: 57.0 }, { x: 27.6, y: 57.2 }, { x: 26.9, y: 76.9 }, { x: 11.3, y: 77.3 }],
-  zone4:  [{ x: 15.9, y: 45.4 }, { x: 45.3, y: 45.7 }, { x: 45.7, y: 56.4 }, { x: 15.9, y: 56.0 }],
-  zone5:  [{ x: 15.0, y: 66.2 }, { x: 30.4, y: 66.2 }, { x: 30.3, y: 73.0 }, { x: 15.0, y: 73.0 }],
-  zone6:  [{ x: 20.9, y: 73.0 }, { x: 31.3, y: 73.4 }, { x: 30.3, y: 85.0 }, { x: 20.1, y: 85.7 }],
-  zone7:  [{ x: 30.4, y: 73.1 }, { x: 42.7, y: 73.6 }, { x: 43.5, y: 85.9 }, { x: 30.4, y: 85.7 }],
-  zone8:  [{ x: 29.2, y: 79.3 }, { x: 41.2, y: 79.2 }, { x: 40.6, y: 85.7 }, { x: 27.9, y: 85.3 }],
-  zone9:  [{ x: 10.4, y: 85.8 }, { x: 20.7, y: 85.7 }, { x: 20.2, y: 93.0 }, { x: 9.4, y: 93.3 }],
+  zone4:  [{ x: 15.9, y: 45.4 }, { x: 49.1, y: 45.7 }, { x: 48.7, y: 56.0 }, { x: 14.9, y: 56.0 }],
+  zone5:  [{ x: 34.1, y: 85.6 }, { x: 79.3, y: 86.4 }, { x: 79.5, y: 94.4 }, { x: 33.9, y: 94.8 }],
+  zone6:  [{ x: 22.3, y: 78.8 }, { x: 35.3, y: 79.1 }, { x: 35.3, y: 85.2 }, { x: 22.3, y: 85.5 }],
+  zone7:  [{ x: 38.4, y: 78.5 }, { x: 82.2, y: 79.0 }, { x: 83.2, y: 86.1 }, { x: 38.6, y: 85.7 }],
+  zone8:  [{ x: 8.3,  y: 79.1 }, { x: 79.4, y: 79.1 }, { x: 88.2, y: 88.2 }, { x: 7.2,  y: 88.2 }],
+  zone9:  [{ x: 10.4, y: 85.6 }, { x: 20.7, y: 85.7 }, { x: 20.2, y: 93.0 }, { x: 9.4,  y: 93.3 }],
   zone10: [{ x: 75.3, y: 34.0 }, { x: 82.9, y: 34.3 }, { x: 84.2, y: 48.8 }, { x: 75.9, y: 48.8 }],
-  zone11: [{ x: 49.9, y: 17.5 }, { x: 71.9, y: 18.1 }, { x: 71.7, y: 32.3 }, { x: 49.8, y: 32.3 }],
-  zone12: [{ x: 22.9, y: 18.0 }, { x: 37.5, y: 17.9 }, { x: 36.9, y: 32.1 }, { x: 22.9, y: 32.4 }],
-  zone13: [{ x: 38.1, y: 18.2 }, { x: 49.6, y: 17.7 }, { x: 49.6, y: 32.3 }, { x: 37.6, y: 32.3 }],
-  zone14: [{ x: 59.4, y: 33.2 }, { x: 75.6, y: 33.4 }, { x: 75.6, y: 46.0 }, { x: 59.4, y: 45.9 }],
-  zone15: [{ x: 38.1, y: 17.2 }, { x: 74.9, y: 17.5 }, { x: 75.4, y: 32.3 }, { x: 38.4, y: 32.3 }],
+  zone11: [{ x: 49.9, y: 17.5 }, { x: 65.9, y: 17.7 }, { x: 66.1, y: 32.3 }, { x: 49.8, y: 32.8 }],
+  zone12: [{ x: 22.9, y: 18.0 }, { x: 37.5, y: 17.9 }, { x: 36.9, y: 32.1 }, { x: 21.9, y: 32.4 }],
+  zone13: [{ x: 38.1, y: 18.2 }, { x: 49.6, y: 17.7 }, { x: 49.6, y: 32.3 }, { x: 37.6, y: 32.1 }],
+  zone14: [{ x: 59.4, y: 33.2 }, { x: 75.4, y: 33.4 }, { x: 75.6, y: 46.0 }, { x: 59.4, y: 45.9 }],
+  zone15: [{ x: 66.7, y: 17.2 }, { x: 74.8, y: 17.5 }, { x: 75.4, y: 32.3 }, { x: 66.9, y: 32.5 }],
 };
+
+export const default15ZoneLabels: Record<string, string> = ZONE_METADATA.reduce(
+  (acc, z) => ({ ...acc, [z.id]: z.name }),
+  {} as Record<string, string>
+);
 
 export const defaultContainerSettings: ContainerSettings = {
   aspectRatio: 1.6,
@@ -245,6 +250,21 @@ const getInitial15ZoneCoords = (): IsometricZoneCoords => {
   return default15ZoneCoords;
 };
 
+const getInitial15ZoneLabels = (): Record<string, string> => {
+  try {
+    const saved = localStorage.getItem('calibrated_15_zone_labels');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        return { ...default15ZoneLabels, ...parsed };
+      }
+    }
+  } catch (e) {
+    console.error('Failed to parse calibrated_15_zone_labels from localStorage:', e);
+  }
+  return default15ZoneLabels;
+};
+
 const getInitialMasterControlTowerLayout = (): MasterControlTowerLayout => {
   try {
     const saved = localStorage.getItem('master_control_tower_layout');
@@ -278,6 +298,7 @@ interface FilterContextType {
   glassmorphic: boolean;
   calibratedIsometricCoords: IsometricZoneCoords;
   calibrated15ZoneCoords: IsometricZoneCoords;
+  calibrated15ZoneLabels: Record<string, string>;
   masterControlTowerLayout: MasterControlTowerLayout;
   setSelectedMachine: (machine: string | null) => void;
   setSelectedReason: (reason: string | null) => void;
@@ -291,6 +312,7 @@ interface FilterContextType {
   setGlassmorphic: (val: boolean) => void;
   setCalibratedIsometricCoords: (coords: IsometricZoneCoords) => void;
   setCalibrated15ZoneCoords: (coords: IsometricZoneCoords) => void;
+  setCalibrated15ZoneLabels: (labels: Record<string, string>) => void;
   setMasterControlTowerLayout: (layout: MasterControlTowerLayout) => void;
   clearFilters: () => void;
 }
@@ -312,11 +334,17 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
   const [glassmorphic, setGlassmorphic] = useState<boolean>(initialConfig.glassmorphic);
   const [calibratedIsometricCoords, setCalibratedIsometricCoordsState] = useState<IsometricZoneCoords>(getInitialIsometricCoords());
   const [calibrated15ZoneCoords, setCalibrated15ZoneCoordsState] = useState<IsometricZoneCoords>(getInitial15ZoneCoords());
+  const [calibrated15ZoneLabels, setCalibrated15ZoneLabelsState] = useState<Record<string, string>>(getInitial15ZoneLabels());
   const [masterControlTowerLayout, setMasterControlTowerLayoutState] = useState<MasterControlTowerLayout>(getInitialMasterControlTowerLayout());
 
   const setCalibratedIsometricCoords = (coords: IsometricZoneCoords) => {
     setCalibratedIsometricCoordsState(coords);
     localStorage.setItem('calibrated_isometric_coords', JSON.stringify(coords));
+  };
+
+  const setCalibrated15ZoneLabels = (labels: Record<string, string>) => {
+    setCalibrated15ZoneLabelsState(labels);
+    localStorage.setItem('calibrated_15_zone_labels', JSON.stringify(labels));
   };
 
   const setCalibrated15ZoneCoords = (coords: IsometricZoneCoords) => {
@@ -360,6 +388,7 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
         glassmorphic,
         calibratedIsometricCoords,
         calibrated15ZoneCoords,
+        calibrated15ZoneLabels,
         masterControlTowerLayout,
         setSelectedMachine,
         setSelectedReason,
@@ -373,6 +402,7 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
         setGlassmorphic,
         setCalibratedIsometricCoords,
         setCalibrated15ZoneCoords,
+        setCalibrated15ZoneLabels,
         setMasterControlTowerLayout,
         clearFilters,
       }}
